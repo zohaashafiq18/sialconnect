@@ -8,9 +8,8 @@
 
 ### 🔍 **Core Functionality**
 - **Factory Directory** - Comprehensive database of Sialkot manufacturers
-- **Smart Search** - Advanced filtering by category, location, and rating  
-- **Product Catalog** - Detailed product listings with specifications
-- **Real-time Analytics** - Live statistics and industry insights
+- **Smart Search** - Advanced filtering by category, location  
+- **Product Catalog** - Detailed product listings with specification
 - **User Authentication** - Secure login/signup system
 - **Admin Dashboard** - Complete management interface
 
@@ -41,8 +40,6 @@
 ### **Backend & Database**
 - **Firebase Authentication** - Secure user management
 - **Firestore Database** - NoSQL real-time database
-- **Firebase Storage** - Image and file storage
-- **Firebase Hosting** - Fast, secure web hosting
 
 ### **Key Industries Covered**
 - 🏈 **Sports Goods** - FIFA approved footballs, sports equipment
@@ -204,5 +201,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 ### 🌟 **Star this repository if you found it helpful!**
+
 
 Made with ❤️ for Sialkot's industrial community
