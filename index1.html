@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>User Profile</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <!-- Firebase v9 compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  
+  <style>
+    body {
+      margin:0;
+      font-family: Arial, sans-serif;
+      background-color: #1A2234;
+      box-sizing: border-box;
+    }
+
+    .top-bar {
+      background-color: #1A2234;
+      color: white;
+      padding: 5px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+    }
+    .top-bar .left a {
+      margin-right: 20px;
+      color: white;
+      text-decoration: none;
+    }
+    .top-bar .right i {
+      font-size: 18px;
+      color: whitesmoke;
+    }
+
+    .navbar {
+      display: flex;
+      height: 40px;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 10px;
+      background: linear-gradient(to right, #f2f2f2, #1a2234a2);
+    }
+    .navbar .logo {
+      display: flex;
+      align-items: center;
+      font-weight: bold;
+      font-size: 22px;
+    }
+    .navbar .logo img {
+      height: 45px;
+      margin-right: 10px;
+    }
+    .navbar .nav-links {
+      list-style: none;
+      display: flex;
+      gap: 25px;
+    }
+    .navbar .nav-links a {
+      text-decoration: none;
+      font-weight: bolder;
+      color: #000000;
+    }
+
+    .search-box {
+      padding-right: 10px;
+      color:#e6e6e6;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .search-box input {
+      display: none;
+      border: 1px solid #ccc;
+      padding: 5px;
+      border-radius: 5px;
+      transition: width 0.3s ease;
+    }
+    .search-box:hover input {
+      display: inline-block;
+      width: 150px;
+    }
+    
+    .container {
+      width: 94%;
+      max-width: 900px;
+      margin: 40px auto;
+       display: flex;
+    flex-direction: column;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    
+    @media (max-width: 768px) {
+      .container {
+        grid-template-columns: 1fr;
+        margin-left: auto;
+        margin-right: auto;
+      }
+    }
+    
+    .card {
+      background: #a2a2a7;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    
+    /* Profile Section */
+    .profile {
+      text-align: center;
+    }
+    .profile img {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-bottom: 15px;
+      border: 3px solid #1A2234;
+    }
+    .profile h2 {
+      margin: 10px 0 5px;
+    }
+    .profile p {
+      color: #555;
+      margin-bottom: 15px;
+    }
+    .btn {
+      background: #1A2234;
+      color: rgb(209, 205, 205);
+      padding: 10px 15px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    .btn:hover {
+      opacity: 0.9;
+    }
+    
+    /* Edit Form */
+    .edit-form {
+      margin-top: 15px;
+      text-align: left;
+    }
+    .edit-form input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #a29e9e;
+      border-radius: 6px;
+    }
+    .hidden {
+      display: none;
+    }
+    
+    /* Notifications */
+    .notifications h3, .events h3 {
+      margin-bottom: 15px;
+      font-weight: bolder;
+      font-size: larger;
+      color: #1A2234;
+    }
+    
+    .notification, .event-item {
+      background: #97979a;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      position: relative;
+    }
+    
+    .notification {
+      border-left: 4px solid #1A2234;
+    }
+    
+    .notification.info { border-left-color: #3b82f6; }
+    .notification.alert { border-left-color: #ef4444; }
+    .notification.success { border-left-color: #10b981; }
+    .notification.warning { border-left-color: #f59e0b; }
+    .notification.promotion { border-left-color: #a855f7; }
+    .notification.update { border-left-color: #6366f1; }
+    
+    .notification strong {
+      display: block;
+      margin-bottom: 5px;
+      color: #1A2234;
+    }
+    
+    .notification p {
+      margin: 5px 0;
+      color: #333;
+    }
+    
+    .notification .time {
+      font-size: 11px;
+      color: #666;
+      margin-top: 5px;
+    }
+    
+    .notification .mark-read {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #1A2234;
+      color: white;
+      border: none;
+      padding: 3px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+    }
+    
+    .event-item {
+      border-left: 4px solid #6366f1;
+    }
+    
+    .event-item h4 {
+      margin: 0 0 8px 0;
+      color: #1A2234;
+    }
+    
+    .event-item .event-details {
+      font-size: 14px;
+      color: #555;
+      line-height: 1.5;
+    }
+    
+    .event-item .event-details i {
+      width: 20px;
+      color: #1A2234;
+    }
+    
+    .no-data {
+      text-align: center;
+      color: #666;
+      padding: 20px;
+    }
+    
+    /* Loading spinner */
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <div class="left">
+      <a href="mailto:sialconnect@gmail.com"><i class="fas fa-envelope"></i> sialconnect@gmail.com</a>
+      <a href="https://maps.google.com/?q=Sialkot,Punjab,Pakistan" target="_blank"><i class="fas fa-map-marker-alt"></i> Sialkot, Punjab Pakistan</a>
+    </div>
+    <div class="right">
+      <a href="signin.html"><i class="fas fa-user-circle"></i></a>
+    </div>
+  </div>
+
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="logo"> 
+      <img src="logo.jpg" alt="SialConnect Logo"> 
+      SIALCONNECT 
+    </div>
+    <ul class="nav-links">
+      <li><a href="index.html">HOME</a></li>
+      <li><a href="factories.html">FACTORY</a></li>
+      <li><a href="categories.html" id="categoryBtn">CATEGORY</a></li>
+      <li><a href="aboutme.html">ABOUT US</a></li>
+    </ul>
+    <div class="search-box">
+      <i class="fas fa-search"></i>
+      <input type="text" placeholder="Search...">
+    </div>
+  </nav>
+  
+  <div class="container">
+    <!-- Profile Section -->
+    <div class="card profile">
+      <img id="profile-pic" src="https://via.placeholder.com/120" alt="Profile Picture">
+      <h2 id="profile-name">Loading...</h2>
+      <p id="profile-email">Loading...</p>
+      <button class="btn" id="edit-btn">Edit Profile</button>
+      <button class="btn" id="logout-btn" style="background:#1A2234;">Logout</button>
+
+      <!-- Edit Form -->
+      <div class="edit-form hidden" id="edit-form">
+        <input type="text" id="new-name" placeholder="Enter new name">
+        <input type="file" id="new-pic" accept="image/*">
+        <button class="btn" id="save-btn">Save Changes</button>
+        <button class="btn" id="cancel-btn" style="background:#666;">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Notifications Section -->
+    <div class="card notifications">
+      <h3>Notifications</h3>
+      <div id="notifications-list">
+        <div class="loading">Loading notifications...</div>
+      </div>
+    </div>
+
+    <!-- Events Section -->
+    <div class="card events">
+      <h3>Upcoming Events</h3>
+      <div id="events-list">
+        <div class="loading">Loading events...</div>
+      </div>
+    </div>
+
+    <!-- User Info Section (Additional) -->
+    <div class="card user-info">
+      <h3>Account Information</h3>
+      <div style="padding: 10px;">
+        <p><strong>Member Since:</strong> <span id="member-since">Loading...</span></p>
+        <p><strong>Account Type:</strong> <span id="account-type">Standard User</span></p>
+        <p><strong>Last Login:</strong> <span id="last-login">Just now</span></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyCEA_n66W-Dt6eBoPe7QiaSUebEv8ctBaE",
+      authDomain: "sialconnect-5efb5.firebaseapp.com",
+      projectId: "sialconnect-5efb5",
+      storageBucket: "sialconnect-5efb5.appspot.com",
+      messagingSenderId: "660615885537",
+      appId: "1:660615885537:web:27e04abd3396adfcde3da0"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    let currentUser = null;
+
+    // Auth State Observer
+    auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        currentUser = user;
+        console.log('User logged in:', user.email);
+        await loadUserProfile(user);
+        loadUserNotifications(user.email);
+        loadUserEvents();
+      } else {
+        // Check localStorage for user info
+        const storedEmail = localStorage.getItem("userEmail");
+        const storedName = localStorage.getItem("userName");
+        
+        if (storedEmail) {
+          document.getElementById("profile-email").textContent = storedEmail;
+          document.getElementById("profile-name").textContent = storedName || storedEmail.split('@')[0];
+          loadUserNotifications(storedEmail);
+          loadUserEvents();
+        } else {
+          // Redirect to login if no user
+          console.log('No user logged in, redirecting to login');
+          window.location.href = 'signin.html';
+        }
+      }
+    });
+
+    // Load User Profile
+    async function loadUserProfile(user) {
+      const nameEl = document.getElementById("profile-name");
+      const emailEl = document.getElementById("profile-email");
+      const picEl = document.getElementById("profile-pic");
+      const memberSince = document.getElementById("member-since");
+
+      try {
+        // Try to get user data from Firestore
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          nameEl.textContent = userData.name || user.displayName || user.email.split('@')[0];
+          emailEl.textContent = user.email;
+          picEl.src = userData.profilePic || user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(nameEl.textContent)}&background=1A2234&color=fff`;
+          
+          if (userData.createdAt) {
+            const date = userData.createdAt.toDate();
+            memberSince.textContent = date.toLocaleDateString();
+          }
+        } else {
+          // Create user document if doesn't exist
+          await db.collection('users').doc(user.uid).set({
+            email: user.email,
+            name: user.displayName || user.email.split('@')[0],
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          
+          nameEl.textContent = user.displayName || user.email.split('@')[0];
+          emailEl.textContent = user.email;
+          picEl.src = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(nameEl.textContent)}&background=1A2234&color=fff`;
+        }
+
+        // Store in localStorage for offline access
+        localStorage.setItem("userEmail", user.email);
+        localStorage.setItem("userName", nameEl.textContent);
+        
+      } catch (error) {
+        console.error('Error loading user profile:', error);
+        // Fallback to basic info
+        nameEl.textContent = user.displayName || user.email.split('@')[0];
+        emailEl.textContent = user.email;
+        picEl.src = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(nameEl.textContent)}&background=1A2234&color=fff`;
+      }
+    }
+
+    // Load Notifications from Firebase
+    async function loadUserNotifications(userEmail) {
+      const notificationsList = document.getElementById("notifications-list");
+      
+      try {
+        // Fetch all notifications (both targeted and general)
+        const [userNotifs, generalNotifs] = await Promise.all([
+          db.collection('user_notifications')
+            .where('userEmail', '==', userEmail)
+            .orderBy('createdAt', 'desc')
+            .limit(10)
+            .get(),
+          db.collection('notifications')
+            .where('target', '==', 'all')
+            .orderBy('createdAt', 'desc')
+            .limit(5)
+            .get()
+        ]);
+        
+        const allNotifications = [];
+        
+        // Add user-specific notifications
+        userNotifs.forEach(doc => {
+          allNotifications.push({ id: doc.id, ...doc.data(), collection: 'user_notifications' });
+        });
+        
+        // Add general notifications
+        generalNotifs.forEach(doc => {
+          allNotifications.push({ id: doc.id, ...doc.data(), collection: 'notifications' });
+        });
+        
+        // Sort by date
+        allNotifications.sort((a, b) => {
+          const dateA = a.createdAt ? a.createdAt.toDate() : new Date(0);
+          const dateB = b.createdAt ? b.createdAt.toDate() : new Date(0);
+          return dateB - dateA;
+        });
+        
+        if (allNotifications.length === 0) {
+          notificationsList.innerHTML = '<div class="no-data">No new notifications</div>';
+          return;
+        }
+        
+        notificationsList.innerHTML = "";
+        allNotifications.slice(0, 10).forEach(notif => {
+          const div = document.createElement("div");
+          div.className = `notification ${notif.type || 'info'}`;
+          
+          const createdAt = notif.createdAt ? new Date(notif.createdAt.toDate()).toLocaleString() : 'Recently';
+          
+          div.innerHTML = `
+            <strong>${notif.title || 'Notification'}</strong>
+            <p>${notif.message || ''}</p>
+            ${notif.link ? `<a href="${notif.link}" target="_blank" style="color: #1A2234; text-decoration: underline; font-size: 13px;">View Details</a>` : ''}
+            <div class="time">
+              <i class="fas fa-clock"></i> ${createdAt}
+            </div>
+            ${!notif.isRead ? `<button class="mark-read" onclick="markAsRead('${notif.id}', '${notif.collection}')">Mark Read</button>` : ''}
+          `;
+          notificationsList.appendChild(div);
+        });
+      } catch (error) {
+        console.error('Error loading notifications:', error);
+        notificationsList.innerHTML = '<div class="no-data">Error loading notifications</div>';
+      }
+    }
+
+    // Load Events from Firebase
+    async function loadUserEvents() {
+      const eventsList = document.getElementById("events-list");
+      
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const snapshot = await db.collection('events')
+          .where('isActive', '==', true)
+          .where('date', '>=', today)
+          .orderBy('date', 'asc')
+          .limit(5)
+          .get();
+        
+        if (snapshot.empty) {
+          eventsList.innerHTML = '<div class="no-data">No upcoming events</div>';
+          return;
+        }
+        
+        eventsList.innerHTML = "";
+        snapshot.forEach(doc => {
+          const event = doc.data();
+          const div = document.createElement("div");
+          div.className = "event-item";
+          
+          div.innerHTML = `
+            <h4>${event.title}</h4>
+            <div class="event-details">
+              <div><i class="fas fa-calendar"></i> ${event.date} ${event.time || ''}</div>
+              <div><i class="fas fa-map-marker-alt"></i> ${event.location}</div>
+              <div><i class="fas fa-info-circle"></i> ${event.description ? event.description.substring(0, 100) + '...' : ''}</div>
+              ${event.registrationLink ? `<div style="margin-top: 8px;"><a href="${event.registrationLink}" target="_blank" style="color: #1A2234; text-decoration: underline;">Register Now</a></div>` : ''}
+            </div>
+          `;
+          eventsList.appendChild(div);
+        });
+      } catch (error) {
+        console.error('Error loading events:', error);
+        eventsList.innerHTML = '<div class="no-data">Error loading events</div>';
+      }
+    }
+
+    // Mark notification as read
+    async function markAsRead(notifId, collection) {
+      try {
+        await db.collection(collection).doc(notifId).update({
+          isRead: true
+        });
+        // Reload notifications
+        const userEmail = document.getElementById("profile-email").textContent;
+        loadUserNotifications(userEmail);
+      } catch (error) {
+        console.error('Error marking notification as read:', error);
+      }
+    }
+
+    // Edit Profile Functions
+    const editBtn = document.getElementById("edit-btn");
+    const editForm = document.getElementById("edit-form");
+    const saveBtn = document.getElementById("save-btn");
+    const cancelBtn = document.getElementById("cancel-btn");
+    const newName = document.getElementById("new-name");
+    const newPic = document.getElementById("new-pic");
+
+    editBtn.addEventListener("click", () => {
+      editForm.classList.remove("hidden");
+      newName.value = document.getElementById("profile-name").textContent;
+    });
+
+    cancelBtn.addEventListener("click", () => {
+      editForm.classList.add("hidden");
+      newName.value = "";
+      newPic.value = "";
+    });
+
+    saveBtn.addEventListener("click", async () => {
+      if (!currentUser) {
+        alert("Please login to edit profile");
+        return;
+      }
+
+      try {
+        const updates = {};
+        
+        if (newName.value) {
+          updates.name = newName.value;
+          document.getElementById("profile-name").textContent = newName.value;
+          localStorage.setItem("userName", newName.value);
+        }
+        
+        if (newPic.files[0]) {
+          const reader = new FileReader();
+          reader.onload = async function(e) {
+            updates.profilePic = e.target.result;
+            document.getElementById("profile-pic").src = e.target.result;
+            localStorage.setItem("profilePic", e.target.result);
+            
+            // Update in Firestore
+            await db.collection('users').doc(currentUser.uid).update(updates);
+          };
+          reader.readAsDataURL(newPic.files[0]);
+        } else if (Object.keys(updates).length > 0) {
+          // Update name only
+          await db.collection('users').doc(currentUser.uid).update(updates);
+        }
+        
+        editForm.classList.add("hidden");
+        alert("Profile updated successfully!");
+      } catch (error) {
+        console.error('Error updating profile:', error);
+        alert("Error updating profile. Please try again.");
+      }
+    });
+
+    // Logout
+    document.getElementById("logout-btn").addEventListener("click", () => {
+      if (confirm("Are you sure you want to logout?")) {
+        auth.signOut().then(() => {
+          localStorage.clear();
+          window.location.href = "signin.html";
+        }).catch((error) => {
+          console.error('Logout error:', error);
+          // Fallback logout
+          localStorage.clear();
+          window.location.href = "signin.html";
+        });
+      }
+    });
+
+    // Set last login time
+    document.getElementById("last-login").textContent = new Date().toLocaleString();
+  </script>
+</body>
+</html>

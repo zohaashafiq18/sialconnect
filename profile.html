@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>User Profile - SialConnect</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <!-- Firebase v9 compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #1A2234;
+      box-sizing: border-box;
+    }
+
+    .top-bar {
+      background-color: #1A2234;
+      color: white;
+      padding: 5px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+    }
+    .top-bar .left a {
+      margin-right: 20px;
+      color: white;
+      text-decoration: none;
+    }
+    .top-bar .right i {
+      font-size: 18px;
+      color: whitesmoke;
+    }
+
+    .navbar {
+      display: flex;
+      height: 40px;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 10px;
+      background: linear-gradient(to right, #f2f2f2, #1a2234a2);
+    }
+    .navbar .logo {
+      display: flex;
+      align-items: center;
+      font-weight: bold;
+      font-size: 22px;
+    }
+    .navbar .logo img {
+      height: 45px;
+      margin-right: 10px;
+    }
+    .navbar .nav-links {
+      list-style: none;
+      display: flex;
+      gap: 25px;
+      margin: 0;
+      padding: 0;
+    }
+    .navbar .nav-links a {
+      text-decoration: none;
+      font-weight: bolder;
+      color: #000000;
+    }
+
+    .search-box {
+      padding-right: 10px;
+      color: #e6e6e6;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .search-box input {
+      display: none;
+      border: 1px solid #ccc;
+      padding: 5px;
+      border-radius: 5px;
+      transition: width 0.3s ease;
+    }
+    .search-box:hover input {
+      display: inline-block;
+      width: 150px;
+    }
+
+    .container {
+      width: 94%;
+      max-width: 700px;
+      margin: 40px auto 0;
+      padding: 0 20px;
+    }
+
+    .card {
+      background: #a2a2a7;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+
+    /* Profile Section */
+    .profile {
+      text-align: center;
+    }
+    .profile img {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-bottom: 15px;
+      border: 3px solid #1A2234;
+    }
+    .profile h2 {
+      margin: 10px 0 5px;
+      color: #1A2234;
+    }
+    .profile p {
+      color: #555;
+      margin-bottom: 15px;
+    }
+    .btn {
+      background: #1A2234;
+      color: rgb(209, 205, 205);
+      padding: 10px 15px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+      transition: all 0.3s ease;
+    }
+    .btn:hover {
+      background: #2a3446;
+      transform: translateY(-2px);
+    }
+
+    /* Edit Form */
+    .edit-form {
+      margin-top: 15px;
+      text-align: left;
+    }
+    .edit-form input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #a29e9e;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+    .hidden {
+      display: none;
+    }
+
+    /* Loading */
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      color: #666;
+    }
+
+    .loading i {
+      animation: spin 1s linear infinite;
+      margin-right: 10px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Notifications */
+    .notifications h3 {
+      margin-bottom: 15px;
+      font-weight: bolder;
+      font-size: larger;
+      color: #1A2234;
+    }
+    .notification {
+      background: #97979a;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-left: 4px solid #1A2234;
+      border-radius: 6px;
+      position: relative;
+      animation: slideIn 0.3s ease;
+    }
+
+    .notification.new {
+      background: #e8f5e8;
+      border-left-color: #4CAF50;
+    }
+
+    .notification.important {
+      background: #fff3cd;
+      border-left-color: #f39c12;
+    }
+
+    .notification.urgent {
+      background: #f8d7da;
+      border-left-color: #e74c3c;
+    }
+
+    .notification .timestamp {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    .notification .close-btn {
+      position: absolute;
+      top: 5px;
+      right: 10px;
+      background: none;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      color: #666;
+    }
+
+    .notification .close-btn:hover {
+      color: #333;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    /* Events Section */
+    .events h3 {
+      margin-bottom: 15px;
+      font-weight: bolder;
+      font-size: larger;
+      color: #1A2234;
+    }
+
+    .event {
+      background: #f0f0f0;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      border-left: 4px solid #3498db;
+    }
+
+    .event-title {
+      font-weight: bold;
+      color: #1A2234;
+      margin-bottom: 5px;
+    }
+
+    .event-date {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+
+    .event-description {
+      color: #555;
+      line-height: 1.4;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+      border: 2px solid #e9ecef;
+    }
+
+    .stat-number {
+      font-size: 24px;
+      font-weight: bold;
+      color: #1A2234;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    .error-message {
+      background: #f8d7da;
+      color: #721c24;
+      padding: 10px;
+      border-radius: 6px;
+      margin: 10px 0;
+      border: 1px solid #f5c6cb;
+    }
+
+    .login-prompt {
+      background: #d1ecf1;
+      color: #0c5460;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 20px 0;
+      border: 1px solid #bee5eb;
+      text-align: center;
+    }
+
+    .refresh-btn {
+      background: #28a745;
+      color: white;
+      padding: 8px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+
+    .refresh-btn:hover {
+      background: #218838;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <div class="left">
+      <a href="mailto:sialconnect@gmail.com"><i class="fas fa-envelope"></i> sialconnect@gmail.com</a>
+      <a href="https://maps.google.com/?q=Sialkot,Punjab,Pakistan" target="_blank"><i class="fas fa-map-marker-alt"></i> Sialkot, Punjab Pakistan</a>
+    </div>
+    <div class="right">
+      <a href="#"><i class="fas fa-user-circle"></i></a>
+    </div>
+  </div>
+
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="logo">
+      <img src="https://via.placeholder.com/45x45/1A2234/ffffff?text=SC" alt="SialConnect Logo">
+      SIALCONNECT
+    </div>
+    <ul class="nav-links">
+      <li><a href="#">HOME</a></li>
+      <li><a href="#">FACTORY</a></li>
+      <li><a href="#" id="categoryBtn">CATEGORY</a></li>
+      <li><a href="#">ABOUT US</a></li>
+    </ul>
+    <div class="search-box">
+      <i class="fas fa-search"></i>
+      <input type="text" placeholder="Search...">
+    </div>
+  </nav>
+
+  <div class="container">
+    <!-- Profile Section -->
+    <div class="card profile">
+      
+      <h2 id="profile-name">Loading...</h2>
+      <p id="profile-email">Loading...</p>
+      
+      <!-- Stats -->
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-number" id="notification-count">-</div>
+          <div class="stat-label">Notifications</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="event-count">-</div>
+          <div class="stat-label">Events</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="factory-count">-</div>
+          <div class="stat-label">Factories</div>
+        </div>
+      </div>
+      
+      <button class="btn" id="edit-btn">Edit Profile</button>
+      <button class="btn" id="logout-btn" style="background:#e74c3c;">Logout</button>
+      <button class="btn refresh-btn" onclick="refreshData()">
+        <i class="fas fa-sync-alt"></i> Refresh
+      </button>
+
+      <!-- Edit Form -->
+      <div class="edit-form hidden" id="edit-form">
+        <input type="text" id="new-name" placeholder="Enter new name">
+        <input type="file" id="new-pic" accept="image/*">
+        <button class="btn" id="save-btn">Save</button>
+      </div>
+    </div>
+
+    <!-- Login Prompt (shown when not authenticated) -->
+    <div class="login-prompt hidden" id="login-prompt">
+      <h3>Please Login</h3>
+      <p>You need to be logged in to view notifications and events.</p>
+      <input type="email" id="login-email" placeholder="Email" style="margin: 5px; padding: 8px; width: 200px;">
+      <input type="password" id="login-password" placeholder="Password" style="margin: 5px; padding: 8px; width: 200px;">
+      <br>
+      <button class="btn" onclick="login()">Login</button>
+      <p style="font-size: 12px; margin-top: 10px;">Demo: Use any email/password to create account</p>
+    </div>
+
+    <!-- Notifications Section -->
+    <div class="card notifications">
+      <h3><i class="fas fa-bell"></i> Notifications</h3>
+      <div id="notifications-list">
+        <div class="loading">
+          <i class="fas fa-spinner"></i>
+          Loading notifications...
+        </div>
+      </div>
+    </div>
+
+    <!-- Events Section -->
+    <div class="card events">
+      <h3><i class="fas fa-calendar-alt"></i> Upcoming Events</h3>
+      <div id="events-list">
+        <div class="loading">
+          <i class="fas fa-spinner"></i>
+          Loading events...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Firebase Configuration (same as your admin dashboard)
+    const firebaseConfig = {
+      apiKey: "AIzaSyCEA_n66W-Dt6eBoPe7QiaSUebEv8ctBaE",
+      authDomain: "sialconnect-5efb5.firebaseapp.com",
+      projectId: "sialconnect-5efb5",
+      storageBucket: "sialconnect-5efb5.appspot.com",
+      messagingSenderId: "660615885537",
+      appId: "1:660615885537:web:27e04abd3396adfcde3da0"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    let currentUser = null;
+
+    // Helper Functions
+    function showError(container, message) {
+      container.innerHTML = `<div class="error-message">
+        <i class="fas fa-exclamation-triangle"></i> ${message}
+      </div>`;
+    }
+
+    function showLoading(container, message = "Loading...") {
+      container.innerHTML = `<div class="loading">
+        <i class="fas fa-spinner"></i> ${message}
+      </div>`;
+    }
+
+    // Load User Profile Data
+    async function loadProfile(user) {
+      try {
+        // Get user data from Firestore
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          document.getElementById("profile-name").textContent = userData.name || user.displayName || "User";
+          document.getElementById("profile-email").textContent = user.email;
+          
+          if (userData.profilePicUrl) {
+            document.getElementById("profile-pic").src = userData.profilePicUrl;
+          }
+        } else {
+          // Create user document if it doesn't exist
+          await db.collection('users').doc(user.uid).set({
+            name: user.displayName || "New User",
+            email: user.email,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          
+          document.getElementById("profile-name").textContent = user.displayName || "New User";
+          document.getElementById("profile-email").textContent = user.email;
+        }
+      } catch (error) {
+        console.error("Error loading profile:", error);
+        document.getElementById("profile-name").textContent = "Error loading profile";
+        document.getElementById("profile-email").textContent = "";
+      }
+    }
+
+    // Load Notifications from Firebase
+    async function loadNotifications() {
+      const notificationsList = document.getElementById("notifications-list");
+      
+      if (!currentUser) {
+        notificationsList.innerHTML = "<p style='color: #666;'>Please login to view notifications</p>";
+        document.getElementById("notification-count").textContent = "0";
+        return;
+      }
+
+      showLoading(notificationsList, "Loading notifications...");
+
+      try {
+        // Get notifications for current user (simple query without orderBy to avoid index requirement)
+        const snapshot = await db.collection('notifications')
+          .where('userId', '==', currentUser.uid)
+          .limit(10)
+          .get();
+
+        if (snapshot.empty) {
+          // Create some sample notifications for new users
+          await createSampleNotifications(currentUser.uid);
+          // Reload after creating samples
+          setTimeout(loadNotifications, 1000);
+          return;
+        }
+
+        notificationsList.innerHTML = "";
+        let unreadCount = 0;
+        
+        // Convert to array and sort by timestamp (client-side sorting)
+        const notifications = [];
+        snapshot.forEach(doc => {
+          notifications.push({ id: doc.id, ...doc.data() });
+        });
+        
+        // Sort by createdAt (newest first)
+        notifications.sort((a, b) => {
+          const aTime = a.createdAt ? a.createdAt.seconds : 0;
+          const bTime = b.createdAt ? b.createdAt.seconds : 0;
+          return bTime - aTime;
+        });
+
+        notifications.forEach(notification => {
+          if (!notification.read) unreadCount++;
+
+          const div = document.createElement("div");
+          div.className = `notification ${notification.type || 'new'} ${!notification.read ? 'unread' : ''}`;
+          div.innerHTML = `
+            <button class="close-btn" onclick="removeNotification('${notification.id}')">&times;</button>
+            <div>${notification.message}</div>
+            <div class="timestamp">${notification.createdAt ? new Date(notification.createdAt.seconds * 1000).toLocaleString() : 'Just now'}</div>
+          `;
+
+          // Mark as read when clicked
+          if (!notification.read) {
+            div.addEventListener('click', () => markAsRead(notification.id));
+          }
+
+          notificationsList.appendChild(div);
+        });
+
+        document.getElementById("notification-count").textContent = unreadCount;
+
+      } catch (error) {
+        console.error("Error loading notifications:", error);
+        showError(notificationsList, "Failed to load notifications. Check console for details.");
+        document.getElementById("notification-count").textContent = "!";
+      }
+    }
+
+    // Create sample notifications for new users
+    async function createSampleNotifications(userId) {
+      const sampleNotifications = [
+        {
+          message: "Welcome to SialConnect! Complete your profile to get started.",
+          type: "new",
+          read: false
+        },
+        {
+          message: "New factory listings are available in your area.",
+          type: "important",
+          read: false
+        },
+        {
+          message: "Export training workshop scheduled for next month.",
+          type: "new",
+          read: false
+        }
+      ];
+
+      try {
+        const batch = db.batch();
+        sampleNotifications.forEach(notification => {
+          const docRef = db.collection('notifications').doc();
+          batch.set(docRef, {
+            ...notification,
+            userId: userId,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        });
+        await batch.commit();
+      } catch (error) {
+        console.error("Error creating sample notifications:", error);
+      }
+    }
+
+    // Mark notification as read
+    async function markAsRead(notificationId) {
+      try {
+        await db.collection('notifications').doc(notificationId).update({
+          read: true
+        });
+        loadNotifications(); // Reload to update UI
+      } catch (error) {
+        console.error("Error marking as read:", error);
+      }
+    }
+
+    // Remove notification
+    async function removeNotification(notificationId) {
+      try {
+        await db.collection('notifications').doc(notificationId).delete();
+        loadNotifications(); // Reload to update UI
+      } catch (error) {
+        console.error("Error removing notification:", error);
+      }
+    }
+
+    // Load Events from Firebase
+    async function loadEvents() {
+      const eventsList = document.getElementById("events-list");
+      showLoading(eventsList, "Loading events...");
+
+      try {
+        // Get all public events (simple query without compound index)
+        const snapshot = await db.collection('events')
+          .limit(10)
+          .get();
+
+        if (snapshot.empty) {
+          // Create some sample events
+          await createSampleEvents();
+          setTimeout(loadEvents, 1000);
+          return;
+        }
+
+        eventsList.innerHTML = "";
+        
+        // Convert to array and filter/sort client-side
+        const events = [];
+        snapshot.forEach(doc => {
+          const eventData = doc.data();
+          // Only show public events
+          if (eventData.isPublic !== false) {
+            events.push({ id: doc.id, ...eventData });
+          }
+        });
+        
+        // Sort by event date
+        events.sort((a, b) => {
+          const aDate = a.eventDate ? a.eventDate.seconds : 0;
+          const bDate = b.eventDate ? b.eventDate.seconds : 0;
+          return aDate - bDate;
+        });
+
+        events.slice(0, 5).forEach(event => {
+          const div = document.createElement("div");
+          div.className = "event";
+          div.innerHTML = `
+            <div class="event-title">${event.title}</div>
+            <div class="event-date">
+              <i class="fas fa-calendar"></i> ${event.eventDate ? new Date(event.eventDate.seconds * 1000).toLocaleDateString() : 'TBD'}
+            </div>
+            <div class="event-description">${event.description}</div>
+          `;
+          eventsList.appendChild(div);
+        });
+
+        document.getElementById("event-count").textContent = events.length;
+
+      } catch (error) {
+        console.error("Error loading events:", error);
+        showError(eventsList, "Failed to load events. Check console for details.");
+        document.getElementById("event-count").textContent = "!";
+      }
+    }
+
+    // Create sample events
+    async function createSampleEvents() {
+      const sampleEvents = [
+        {
+          title: "Sialkot Business Expo 2025",
+          description: "Annual business exhibition featuring local manufacturers and suppliers.",
+          eventDate: firebase.firestore.Timestamp.fromDate(new Date('2025-03-15')),
+          isPublic: true
+        },
+        {
+          title: "Manufacturing Workshop",
+          description: "Learn about latest manufacturing techniques and quality standards.",
+          eventDate: firebase.firestore.Timestamp.fromDate(new Date('2025-03-22')),
+          isPublic: true
+        },
+        {
+          title: "Export Training Session",
+          description: "Comprehensive training on export procedures and documentation.",
+          eventDate: firebase.firestore.Timestamp.fromDate(new Date('2025-04-05')),
+          isPublic: true
+        }
+      ];
+
+      try {
+        const batch = db.batch();
+        sampleEvents.forEach(event => {
+          const docRef = db.collection('events').doc();
+          batch.set(docRef, {
+            ...event,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        });
+        await batch.commit();
+      } catch (error) {
+        console.error("Error creating sample events:", error);
+      }
+    }
+
+    // Load Factory Count
+    async function loadFactoryCount() {
+      try {
+        const snapshot = await db.collection('factories').get();
+        document.getElementById("factory-count").textContent = snapshot.size;
+      } catch (error) {
+        console.error("Error loading factory count:", error);
+        document.getElementById("factory-count").textContent = "!";
+      }
+    }
+
+    // Login function
+    async function login() {
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+
+      if (!email || !password) {
+        alert('Please enter email and password');
+        return;
+      }
+
+      try {
+        await auth.signInWithEmailAndPassword(email, password);
+      } catch (error) {
+        if (error.code === 'auth/user-not-found') {
+          // Create new account
+          try {
+            await auth.createUserWithEmailAndPassword(email, password);
+          } catch (createError) {
+            alert('Error: ' + createError.message);
+          }
+        } else {
+          alert('Login Error: ' + error.message);
+        }
+      }
+    }
+
+    // Refresh all data
+    function refreshData() {
+      loadNotifications();
+      loadEvents();
+      loadFactoryCount();
+    }
+
+ // Logout
+    document.getElementById("logout-btn").addEventListener("click", () => {
+      if (confirm("Are you sure you want to logout?")) {
+        auth.signOut().then(() => {
+          localStorage.clear();
+          window.location.href = "signin.html";
+        }).catch((error) => {
+          console.error('Logout error:', error);
+          // Fallback logout
+          localStorage.clear();
+          window.location.href = "signin.html";
+        });
+      }
+    });
+
+    // Auth State Observer
+    auth.onAuthStateChanged((user) => {
+      currentUser = user;
+      
+      if (user) {
+        document.getElementById("login-prompt").classList.add("hidden");
+        loadProfile(user);
+        loadNotifications();
+        loadEvents();
+        loadFactoryCount();
+      } else {
+        document.getElementById("profile-name").textContent = "Guest User";
+        document.getElementById("profile-email").textContent = "Please login to view full profile";
+        document.getElementById("login-prompt").classList.remove("hidden");
+        document.getElementById("notification-count").textContent = "0";
+        document.getElementById("event-count").textContent = "-";
+        document.getElementById("factory-count").textContent = "-";
+        
+        // Show login required message for notifications
+        document.getElementById("notifications-list").innerHTML = 
+          "<p style='color: #666;'>Please login to view notifications</p>";
+        
+        // Events can still be shown as they're public
+        loadEvents();
+        loadFactoryCount();
+      }
+    });
+
+    // Edit Profile Functions
+    const editBtn = document.getElementById("edit-btn");
+    const editForm = document.getElementById("edit-form");
+    const saveBtn = document.getElementById("save-btn");
+    const cancelBtn = document.getElementById("cancel-btn");
+    const newName = document.getElementById("new-name");
+    const newPic = document.getElementById("new-pic");
+
+    editBtn.addEventListener("click", () => {
+      editForm.classList.remove("hidden");
+      newName.value = document.getElementById("profile-name").textContent;
+    });
+
+    cancelBtn.addEventListener("click", () => {
+      editForm.classList.add("hidden");
+      newName.value = "";
+      newPic.value = "";
+    });
+
+    saveBtn.addEventListener("click", async () => {
+      if (!currentUser) {
+        alert("Please login to edit profile");
+        return;
+      }
+
+      try {
+        const updates = {};
+        
+        if (newName.value) {
+          updates.name = newName.value;
+          document.getElementById("profile-name").textContent = newName.value;
+          localStorage.setItem("userName", newName.value);
+        }
+        
+        if (newPic.files[0]) {
+          const reader = new FileReader();
+          reader.onload = async function(e) {
+            updates.profilePic = e.target.result;
+            document.getElementById("profile-pic").src = e.target.result;
+            localStorage.setItem("profilePic", e.target.result);
+            
+            // Update in Firestore
+            await db.collection('users').doc(currentUser.uid).update(updates);
+          };
+          reader.readAsDataURL(newPic.files[0]);
+        } else if (Object.keys(updates).length > 0) {
+          // Update name only
+          await db.collection('users').doc(currentUser.uid).update(updates);
+        }
+        
+        editForm.classList.add("hidden");
+        alert("Profile updated successfully!");
+      } catch (error) {
+        console.error('Error updating profile:', error);
+        alert("Error updating profile. Please try again.");
+      }
+    });
+
+    // Initialize page
+    window.addEventListener('load', () => {
+      // Firebase will handle auth state and load data accordingly
+      console.log("Profile page loaded with Firebase integration");
+    });
+  </script>
+</body>
+</html>

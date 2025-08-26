@@ -1,0 +1,89 @@
+# {
+
+    margin: 0;
+    padding: 0;
+}
+.main{
+    background-image:  url(factories.jpeg);
+    opacity: 30;
+    background-size: cover;
+    background-position: center;
+}
+
+.user-toolbar {
+    background-color: #d6d3d3;
+    padding: 7px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.user-info {
+    display: flex;
+    gap: 20px;
+}
+
+.nav-bar {
+    background-image: url(bluetex.jpg);
+    opacity: 40;
+    background-size: cover;
+    color: rgb(166, 159, 159);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+}
+
+.nav-bar .logo {
+    display: flex;
+    align-items: center;
+}
+
+.nav-bar .logo img {
+    height: 40px; /* Adjust logo size */
+    margin-right: 10px;
+}
+
+.nav-links {
+    list-style: none;
+    display: flex;
+    gap: 20px;
+}
+
+.nav-links li {
+    display: inline;
+}
+
+.nav-links a {
+    color: white;
+    text-decoration: none;
+}
+
+.nav-links a:hover {
+    text-decoration: underline;
+}
+
+.search-bar {
+    display: flex;
+    align-items: center;
+}
+
+.search-bar input {
+    padding: 5px;
+    border: none;
+    border-radius: 3px;
+}
+
+.search-bar button {
+    padding: 5px 10px;
+    margin-left: 5px;
+    border: none;
+    background-color: #555;
+    color: white;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.search-bar button:hover {
+    background-color: #777;
+}

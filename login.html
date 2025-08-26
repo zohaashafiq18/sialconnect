@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SialConnect Login</title>
+    <link rel="stylesheet" href="login.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+        import { getFirestore, doc, getDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+
+        // Your Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCEA_n66W-Dt6eBoPe7QiaSUebEv8ctBaE",
+            authDomain: "sialconnect-5efb5.firebaseapp.com",
+            projectId: "sialconnect-5efb5",
+            storageBucket: "sialconnect-5efb5.firebasestorage.app",
+            messagingSenderId: "660615885537",
+            appId: "1:660615885537:web:27e04abd3396adfcde3da0"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Make Firebase available globally
+        window.auth = auth;
+        window.db = db;
+        window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+        window.onAuthStateChanged = onAuthStateChanged;
+        window.signOut = signOut;
+        window.doc = doc;
+        window.getDoc = getDoc;
+        window.updateDoc = updateDoc;
+    </script>
+
+    <style>
+        /* Loading spinner */
+        .loading {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-message {
+            color: #e74c3c;
+            background: #ffebee;
+            padding: 12px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid #e74c3c;
+            font-size: 14px;
+        }
+        
+        .success-message {
+            color: #27ae60;
+            background: #e8f5e8;
+            padding: 12px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid #27ae60;
+            font-size: 14px;
+        }
+        
+        .login-btn:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        .role-select {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            background-color: white;
+        }
+        
+        .role-select:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        
+        .info-message {
+            color: #3498db;
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid #3498db;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="left">
+            <a href="mailto:sialconnect@gmail.com"><i class="fas fa-envelope"></i> sialconnect@gmail.com</a>
+            <a href="https://maps.google.com/?q=Sialkot,Punjab,Pakistan" target="_blank"><i class="fas fa-map-marker-alt"></i> Sialkot, Punjab Pakistan</a>
+        </div>
+        <div class="right">
+            <a href="signin.html"><i class="fas fa-user-circle"></i></a>
+        </div>
+    </div>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="logo"> <img src="logo.jpg" alt="SialConnect Logo"> SIALCONNECT </div>
+    </nav>
+
+    <main class="login-container">
+        <img src="logo.jpg" alt="SialConnect Logo" class="main-logo">
+        <h2>Welcome back to SialConnect</h2>
+        
+        <div id="message-container"></div>
+        
+        <form class="login-form" id="loginForm">
+            <div class="input-group">
+                <span class="icon"><i class="fa fa-envelope"></i></span>
+                <input type="email" id="email" placeholder="Email Address" required>
+            </div>
+            
+            <div class="input-group">
+                <span class="icon"><i class="fa fa-lock"></i></span>
+                <input type="password" id="password" placeholder="Password" required minlength="6">
+            </div>
+
+            <select class="role-select" id="userRole" required>
+                <option value="" disabled selected>Login as</option>
+                <option value="customer">USER</option>
+                <option value="admin">ADMIN</option>
+            </select>
+
+            <a href="#" class="forgot" id="forgotPassword">Forgot your password?</a>
+            <button type="submit" class="login-btn" id="loginBtn">
+                <span id="btnText">Log In</span>
+            </button>
+        </form>
+        
+        <p class="signup-text">
+            Not on SialConnect yet? Let's <a href="signin.html" class="signup-link">Sign Up</a>
+        </p>
+    </main>
+
+    <script>
+        // Display message function
+        function showMessage(message, type = 'error') {
+            const container = document.getElementById('message-container');
+            container.innerHTML = `<div class="${type}-message">${message}</div>`;
+            
+            // Auto hide after 5 seconds
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+
+        // Validate form inputs
+        function validateForm(email, password, role) {
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                throw new Error('Please enter a valid email address');
+            }
+            
+            if (password.length < 6) {
+                throw new Error('Password must be at least 6 characters long');
+            }
+            
+            if (!role) {
+                throw new Error('Please select your login role');
+            }
+        }
+
+        // Check user role and permissions
+        async function checkUserPermissions(user, selectedRole) {
+            try {
+                // Fixed admin email (replace with your desired admin email)
+                const FIXED_ADMIN_EMAIL = "admin@sialconnect.com";
+                
+                const userDoc = await window.getDoc(window.doc(window.db, 'users', user.uid));
+                
+                if (!userDoc.exists()) {
+                    throw new Error('User profile not found. Please contact support.');
+                }
+                
+                const userData = userDoc.data();
+                let userType = userData.userType || 'customer';
+                
+                // Check if user is the fixed admin
+                if (user.email === FIXED_ADMIN_EMAIL) {
+                    userType = 'admin';
+                    
+                    // Update user type in database if not already set
+                    if (userData.userType !== 'admin') {
+                        await window.updateDoc(window.doc(window.db, 'users', user.uid), {
+                            userType: 'admin',
+                            adminLevel: 'super', // Super admin privilege
+                            lastLogin: new Date(),
+                            isActive: true
+                        });
+                        
+                        console.log(`✅ Fixed admin email detected: ${user.email} - Auto-promoted to admin`);
+                    }
+                }
+                // For database-based admin checking (for testing)
+                else if (userData.userType === 'admin') {
+                    userType = 'admin';
+                    console.log(`✅ Database admin detected: ${user.email}`);
+                }
+                
+                // Role permission check
+                if (selectedRole === 'admin' && userType !== 'admin') {
+                    throw new Error(`❌ Access Denied: You do not have admin privileges. Your account type: ${userType.toUpperCase()}`);
+                }
+                
+                // Update last login time
+                await window.updateDoc(window.doc(window.db, 'users', user.uid), {
+                    lastLogin: new Date(),
+                    isActive: true
+                });
+                
+                // Update userData with current userType
+                userData.userType = userType;
+                
+                return userData;
+                
+            } catch (error) {
+                console.error('Error checking user permissions:', error);
+                throw error;
+            }
+        }
+
+        // Redirect based on role
+        function redirectUser(role, userData) {
+            const redirectMap = {
+                'customer': 'sialconnt.html',  // User dashboard/home
+                'admin': 'simple_admin_dashboard.html' // Admin dashboard - UPDATE THIS TO YOUR ACTUAL FILENAME
+            };
+            
+            const redirectPage = redirectMap[role] || 'sialconnt.html';
+            
+            // Store user session data
+            sessionStorage.setItem('userRole', role);
+            sessionStorage.setItem('userName', userData.name);
+            sessionStorage.setItem('userEmail', userData.email);
+            sessionStorage.setItem('userType', userData.userType);
+            
+            if (role === 'admin') {
+                sessionStorage.setItem('adminLevel', userData.adminLevel || 'regular');
+                showMessage(`🔑 Welcome Admin, ${userData.name}! Redirecting to Admin Panel...`, 'success');
+            } else {
+                showMessage(`👋 Welcome back, ${userData.name}! Redirecting...`, 'success');
+            }
+            
+            // Debug logging
+            console.log(`Redirecting to: ${redirectPage}`);
+            
+            setTimeout(() => {
+                window.location.href = redirectPage;
+            }, 1500);
+        }
+
+        // Handle form submission
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const selectedRole = document.getElementById('userRole').value;
+            
+            const loginBtn = document.getElementById('loginBtn');
+            const btnText = document.getElementById('btnText');
+            
+            try {
+                // Validate inputs
+                validateForm(email, password, selectedRole);
+                
+                // Show loading state
+                loginBtn.disabled = true;
+                btnText.innerHTML = '<span class="loading"></span>Signing In...';
+                
+                // Sign in with Firebase
+                const userCredential = await window.signInWithEmailAndPassword(window.auth, email, password);
+                const user = userCredential.user;
+                
+                // Check user permissions and get user data
+                const userData = await checkUserPermissions(user, selectedRole);
+                
+                // Redirect based on role
+                redirectUser(selectedRole, userData);
+                
+            } catch (error) {
+                console.error('Login error:', error);
+                
+                // Handle specific Firebase errors
+                let errorMessage = 'An error occurred during login';
+                
+                switch (error.code) {
+                    case 'auth/user-not-found':
+                        errorMessage = 'No account found with this email. Please sign up first.';
+                        break;
+                    case 'auth/wrong-password':
+                        errorMessage = 'Incorrect password. Please try again.';
+                        break;
+                    case 'auth/invalid-email':
+                        errorMessage = 'Please enter a valid email address.';
+                        break;
+                    case 'auth/user-disabled':
+                        errorMessage = 'Your account has been disabled. Please contact support.';
+                        break;
+                    case 'auth/too-many-requests':
+                        errorMessage = 'Too many failed attempts. Please wait and try again later.';
+                        break;
+                    case 'auth/network-request-failed':
+                        errorMessage = 'Network error. Please check your internet connection.';
+                        break;
+                    default:
+                        errorMessage = error.message || errorMessage;
+                }
+                
+                showMessage(errorMessage);
+                
+            } finally {
+                // Reset button state
+                loginBtn.disabled = false;
+                btnText.innerHTML = 'Log In';
+            }
+        });
+
+        // Handle forgot password
+        document.getElementById('forgotPassword').addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value.trim();
+            
+            if (!email) {
+                showMessage('Please enter your email address first, then click "Forgot Password"', 'info');
+                document.getElementById('email').focus();
+                return;
+            }
+            
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                showMessage('Please enter a valid email address', 'error');
+                return;
+            }
+            
+            // You can implement password reset here
+            showMessage('Password reset feature will be available soon. Please contact support at sialconnect@gmail.com', 'info');
+        });
+
+        // Auto-hide messages when user starts typing
+        ['email', 'password', 'userRole'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('input', () => {
+                    const container = document.getElementById('message-container');
+                    if (container.innerHTML) {
+                        container.innerHTML = '';
+                    }
+                });
+                
+                element.addEventListener('change', () => {
+                    const container = document.getElementById('message-container');
+                    if (container.innerHTML) {
+                        container.innerHTML = '';
+                    }
+                });
+            }
+        });
+
+        // Check if user is already logged in
+        window.addEventListener('load', () => {
+            window.onAuthStateChanged(window.auth, (user) => {
+                if (user) {
+                    // User is already logged in, show option to continue
+                    const storedRole = sessionStorage.getItem('userRole') || 'customer';
+                    const userName = sessionStorage.getItem('userName') || user.displayName || 'User';
+                    
+                    showMessage(`Welcome back, ${userName}! You are already logged in. <a href="#" id="continueLink" style="color: #3498db; text-decoration: underline;">Continue to Dashboard</a>`, 'info');
+                    
+                    // Add click handler for continue link
+                    setTimeout(() => {
+                        const continueLink = document.getElementById('continueLink');
+                        if (continueLink) {
+                            continueLink.addEventListener('click', (e) => {
+                                e.preventDefault();
+                                if (storedRole === 'admin') {
+                                    window.location.href = 'simple_admin_dashboard.html';
+                                } else {
+                                    window.location.href = 'sialconnt.html';
+                                }
+                            });
+                        }
+                    }, 100);
+                }
+            });
+            
+            console.log('🔥 Firebase Login initialized successfully!');
+            console.log('Auth object:', window.auth);
+            console.log('Database object:', window.db);
+        });
+    </script>
+</body>
+</html>

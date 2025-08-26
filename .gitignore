@@ -1,0 +1,236 @@
+# SialConnect - .gitignore
+
+# =============================================
+# Operating System Files
+# =============================================
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+
+# =============================================
+# Development Environment
+# =============================================
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# =============================================
+# Node.js (if using build tools)
+# =============================================
+
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# =============================================
+# Environment & Configuration
+# =============================================
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Firebase
+.firebase/
+.firebaserc
+firebase-debug.log
+firebase-debug.*.log
+
+# =============================================
+# Build & Distribution
+# =============================================
+
+# Build outputs
+dist/
+build/
+out/
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# =============================================
+# Logs
+# =============================================
+
+# General logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Runtime logs
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# =============================================
+# Cache & Temporary Files
+# =============================================
+
+# Cache directories
+.cache/
+.parcel-cache/
+.eslintcache
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# =============================================
+# Testing
+# =============================================
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+.nyc_output
+
+# =============================================
+# Backup & Archive Files
+# =============================================
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+*.save
+
+# Archive files
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# =============================================
+# Image Processing
+# =============================================
+
+# Image thumbnails
+*.thumb
+
+# Photoshop files
+*.psd
+
+# =============================================
+# Documentation
+# =============================================
+
+# Auto-generated docs
+docs/_build/
+
+# =============================================
+# Database
+# =============================================
+
+# SQLite
+*.db
+*.sqlite
+*.sqlite3
+
+# =============================================
+# Security & Sensitive Files
+# =============================================
+
+# SSH keys
+*.key
+*.pem
+
+# Certificates
+*.crt
+*.cer
+*.p12
+
+# =============================================
+# Project Specific
+# =============================================
+
+# Firebase service account keys
+serviceAccountKey.json
+service-account-file.json
+
+# API keys file (if you create one)
+config/api-keys.js
+config/firebase-config.js
+
+# User uploaded content (if storing locally)
+uploads/
+user-content/
+
+# Analytics and tracking files
+analytics/
+
+# =============================================
+# Optional: Exclude large asset directories
+# =============================================
+
+# Uncomment if you have large image directories
+# images/large/
+# assets/videos/
+# assets/raw/
+
+# =============================================
+# Keep Important Files
+# =============================================
+
+# Force include important files that might be ignored
+!.gitkeep
+!.htaccess
+
+# README and documentation
+!README.md
+!CONTRIBUTING.md
+!CHANGELOG.md
+!LICENSE

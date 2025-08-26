@@ -1,0 +1,131 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #1A2234;
+  box-sizing: border-box;
+}
+
+.top-bar {
+  background-color: #1A2234;
+  color: white;
+  padding: 5px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+.top-bar .left a {
+  margin-right: 20px;
+  color: white;
+  text-decoration: none;
+}
+.top-bar .right i {
+  font-size: 18px;
+}
+
+.navbar {
+  display: flex;
+  height: 40px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 10px;
+  background: linear-gradient(to right, #f2f2f2, #1a2234a2);
+}
+.navbar .logo {
+  display: flex;
+  align-items: center;
+  font-weight: bold;
+  font-size: 22px;
+}
+.navbar .logo img {
+  height: 45px;
+  margin-right: 10px;
+}
+.navbar .nav-links {
+  list-style: none;
+  display: flex;
+  gap: 25px;
+}
+.navbar .nav-links a {
+  text-decoration: none;
+  font-weight: bolder;
+  color: #000000;
+  
+}
+
+.search-box {
+  padding-right: 10px;
+  color:#e6e6e6;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.search-box input {
+  display: none;
+  border: 1px solid #ccc;
+  padding: 5px;
+  border-radius: 5px;
+  transition: width 0.3s ease;
+}
+.search-box:hover input {
+  display: inline-block;
+  width: 150px;
+}
+
+.hero {
+  background: url(explloree.jpg) no-repeat center center/cover;
+  height: 300px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.hero h1 {
+  font-size: 36px;
+  color: #fff;
+  padding: 10px 20px;
+}
+
+.factory-list {
+  padding: 20px;
+}
+
+.factory-card {
+  display: flex;
+  align-items: center;
+  background-color: #ccc;
+  color: #000;
+  margin-bottom: 16px;
+  border-radius: 5px;
+  padding: 10px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.factory-card:hover {
+  transform: scale(1.02);
+}
+
+.factory-card img {
+  height: 110px;
+  width: 200px;
+  object-fit: contain;
+  margin-right: 15px;
+}
+
+.factory-card .info {
+  flex: 1;
+}
+
+.factory-card .info h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.arrow {
+  font-size: 80px;
+  color: #000;
+  
+}

@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SialConnect Admin Dashboard - Enhanced</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+
+  <!-- Firebase v9 compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+
+  <style>
+    .sidebar { transition: all .3s ease; }
+    .loading { display: none; }
+    .loading.active { display: flex; }
+    @media (max-width: 1024px){
+      .sidebar{ transform: translateX(-100%); }
+      .sidebar.active{ transform: translateX(0); }
+    }
+    .modal { display: none; }
+    .modal.active { display: flex; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+  <!-- Toast -->
+  <div id="toast" class="fixed top-4 right-4 z-50 hidden">
+    <div class="bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg" id="toastContent"></div>
+  </div>
+
+  <!-- Loading -->
+  <div id="loadingSpinner" class="fixed inset-0 bg-black/40 items-center justify-center z-50 loading">
+    <div class="bg-white p-6 rounded-lg shadow-lg flex items-center">
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
+      <span>Processing...</span>
+    </div>
+  </div>
+
+  <!-- Edit Category Modal -->
+  <div id="editCategoryModal" class="modal fixed inset-0 bg-black/50 items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold">Edit Category</h2>
+        <button onclick="closeEditCategoryModal()" class="text-gray-500 hover:text-gray-700">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <input type="hidden" id="editCategoryKey">
+        <input type="text" id="editCategoryName" placeholder="Category Name *" class="p-3 border rounded-lg col-span-2">
+      </div>
+      
+      <h3 class="text-lg font-semibold mb-3">Items</h3>
+      <div id="editItemsContainer"></div>
+      
+      <div class="flex gap-2 mb-4">
+        <button type="button" onclick="addEditItem()" class="bg-green-600 text-white px-4 py-2 rounded">
+          + Add Item
+        </button>
+        <button onclick="updateCategory()" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+          Update Category
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Product Modal -->
+  <div id="editProductModal" class="modal fixed inset-0 bg-black/50 items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-8 w-full max-w-2xl">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold">Edit Product</h2>
+        <button onclick="closeEditProductModal()" class="text-gray-500 hover:text-gray-700">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+      
+      <input type="hidden" id="editProductId">
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <input type="text" id="editProductName" placeholder="Product Name *" class="p-3 border rounded-lg">
+        <input type="text" id="editProductCategory" placeholder="Category *" class="p-3 border rounded-lg">
+        <input type="text" id="editProductSubcategory" placeholder="Subcategory" class="p-3 border rounded-lg">
+        <input type="text" id="editProducerCompany" placeholder="Producer Company *" class="p-3 border rounded-lg">
+        <input type="number" id="editProductPrice" placeholder="Price" class="p-3 border rounded-lg">
+        <input type="text" id="editProductImage" placeholder="Image URL" class="p-3 border rounded-lg">
+      </div>
+      
+      <textarea id="editProductDescription" placeholder="Product Description" class="w-full p-3 border rounded-lg mb-4" rows="4"></textarea>
+      
+      <button onclick="updateProduct()" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700">
+        Update Product
+      </button>
+    </div>
+  </div>
+
+  <!-- Login Modal -->
+  <div id="loginModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-8 w-96">
+      <h2 class="text-2xl font-bold mb-6 text-center">Admin Login</h2>
+      <div class="mb-4">
+        <input type="email" id="loginEmail" placeholder="Email" class="w-full p-3 border rounded-lg" />
+      </div>
+      <div class="mb-6">
+        <input type="password" id="loginPassword" placeholder="Password" class="w-full p-3 border rounded-lg" />
+      </div>
+      <button onclick="handleLogin()" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700">
+        Login
+      </button>
+      <p class="text-sm text-gray-500 text-center mt-4">Use any email/password to create account</p>
+    </div>
+  </div>
+
+  <!-- Main Dashboard -->
+  <div id="mainContent" class="hidden">
+    <!-- Mobile Menu Button -->
+    <button onclick="toggleSidebar()" class="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-blue-600 text-white">
+      <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar fixed left-0 top-0 h-full w-64 bg-gray-900 text-white p-6 lg:translate-x-0 z-40">
+      <div class="flex items-center justify-center mb-8">
+        <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
+          <i class="fas fa-industry"></i>
+        </div>
+        <h1 class="text-xl font-bold">SialConnect</h1>
+      </div>
+      
+      <nav class="space-y-2">
+        <a href="#" onclick="showSection('dashboard')" class="nav-link block p-3 rounded-lg bg-blue-600">
+          <i class="fas fa-home mr-3"></i>Dashboard
+        </a>
+        <a href="#" onclick="showSection('categories')" class="nav-link block p-3 rounded-lg hover:bg-gray-800">
+          <i class="fas fa-tags mr-3"></i>Categories
+        </a>
+        <a href="#" onclick="showSection('factories')" class="nav-link block p-3 rounded-lg hover:bg-gray-800">
+          <i class="fas fa-industry mr-3"></i>Factories
+        </a>
+        <a href="#" onclick="showSection('products')" class="nav-link block p-3 rounded-lg hover:bg-gray-800">
+          <i class="fas fa-box mr-3"></i>Products
+        </a>
+        <a href="#" onclick="showSection('events')" class="nav-link block p-3 rounded-lg hover:bg-gray-800">
+          <i class="fas fa-calendar-alt mr-3"></i>Events
+        </a>
+        <a href="#" onclick="showSection('notifications')" class="nav-link block p-3 rounded-lg hover:bg-gray-800">
+          <i class="fas fa-bell mr-3"></i>Notifications
+        </a>
+        <a href="#" onclick="showSection('users')" class="nav-link block p-3 rounded-lg hover:bg-gray-800">
+          <i class="fas fa-users mr-3"></i>Users
+        </a>
+      </nav>
+
+      <div class="absolute bottom-6 left-6 right-6">
+        <button onclick="handleLogout()" class="w-full p-3 bg-red-600 rounded-lg hover:bg-red-700">
+          <i class="fas fa-sign-out-alt mr-2"></i>Logout
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="lg:ml-64 p-6">
+      
+      <!-- Dashboard Section -->
+      <section id="dashboard" class="section">
+        <h1 class="text-3xl font-bold mb-6">Dashboard</h1>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-2">Total Categories</h3>
+            <p class="text-3xl font-bold text-orange-600" id="categoryCount">0</p>
+          </div>
+          <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-2">Total Factories</h3>
+            <p class="text-3xl font-bold text-blue-600" id="factoryCount">0</p>
+          </div>
+          <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-2">Total Products</h3>
+            <p class="text-3xl font-bold text-green-600" id="productCount">0</p>
+          </div>
+          <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-2">Total Users</h3>
+            <p class="text-3xl font-bold text-purple-600" id="userCount">0</p>
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-2">Active Events</h3>
+            <p class="text-3xl font-bold text-indigo-600" id="eventCount">0</p>
+          </div>
+          <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-2">Recent Notifications</h3>
+            <p class="text-3xl font-bold text-pink-600" id="notificationCount">0</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Categories Section -->
+      <section id="categories" class="section hidden">
+        <h1 class="text-3xl font-bold mb-6">Category Management</h1>
+        
+        <!-- Add Category Form -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+          <h2 class="text-xl font-semibold mb-4">Add New Category</h2>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <input type="text" id="categoryKey" placeholder="Category Key (e.g., sports) *" class="p-3 border rounded-lg">
+            <input type="text" id="categoryName" placeholder="Category Name (e.g., Sports Goods) *" class="p-3 border rounded-lg">
+          </div>
+          
+          <h3 class="text-lg font-semibold mb-3">Items</h3>
+          <div id="itemsContainer">
+            <div class="item-row border p-4 rounded-lg mb-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                <input type="text" placeholder="Item Name (e.g., Soccer)" class="item-name p-2 border rounded">
+                <input type="text" placeholder="Item Image URL" class="item-img p-2 border rounded">
+              </div>
+              
+              <h4 class="font-medium mb-2">Subcategories</h4>
+              <div class="subcategories-container">
+                <div class="subcategory-row grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
+                  <input type="text" placeholder="Sub Name" class="sub-name p-2 border rounded text-sm">
+                  <input type="text" placeholder="Sub Image URL" class="sub-img p-2 border rounded text-sm">
+                  <input type="text" placeholder="Product Link" class="sub-link p-2 border rounded text-sm">
+                </div>
+              </div>
+              <button type="button" onclick="addSubcategory(this)" class="bg-gray-500 text-white px-3 py-1 rounded text-sm mr-2">
+                + Add Subcategory
+              </button>
+              <button type="button" onclick="removeItem(this)" class="bg-red-500 text-white px-3 py-1 rounded text-sm">
+                Remove Item
+              </button>
+            </div>
+          </div>
+          
+          <div class="flex gap-2 mb-4">
+            <button type="button" onclick="addItem()" class="bg-green-600 text-white px-4 py-2 rounded">
+              + Add Item
+            </button>
+            <button onclick="saveCategory()" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+              Save Category
+            </button>
+          </div>
+        </div>
+
+        <!-- Categories List -->
+        <div class="bg-white p-6 rounded-lg shadow">
+          <h2 class="text-xl font-semibold mb-4">All Categories</h2>
+          <div id="categoriesList" class="space-y-4"></div>
+        </div>
+      </section>
+
+      <!-- Factories Section -->
+      <section id="factories" class="section hidden">
+        <h1 class="text-3xl font-bold mb-6">Factory Management</h1>
+        
+        <!-- Add Factory Form -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+          <h2 class="text-xl font-semibold mb-4">Add New Factory</h2>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <input type="text" id="factoryName" placeholder="Factory Name *" class="p-3 border rounded-lg">
+            <input type="text" id="factoryCategory" placeholder="Category *" class="p-3 border rounded-lg">
+            <input type="text" id="factoryAddress" placeholder="Address *" class="p-3 border rounded-lg">
+            <input type="text" id="factoryPhone" placeholder="Phone *" class="p-3 border rounded-lg">
+            <input type="email" id="factoryEmail" placeholder="Email *" class="p-3 border rounded-lg">
+            <input type="url" id="factoryWebsite" placeholder="Website (optional)" class="p-3 border rounded-lg">
+             <input type="url" id="factoryLogo" placeholder="Logo URL (optional)" class="p-3 border rounded-lg">
+            <div class="flex items-center">
+              <input type="file" id="factoryLogoFile" accept="image/*" onchange="handleFactoryLogoUpload()" class="hidden">
+              <button type="button" onclick="document.getElementById('factoryLogoFile').click()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                <i class="fas fa-upload mr-2"></i>Upload Logo
+              </button>
+              <img id="factoryLogoPreview" src="" alt="" class="ml-4 w-16 h-16 object-cover rounded hidden">
+            </div>
+          </div>
+          
+          <button onclick="saveFactory()" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700">
+            Save Factory
+          </button>
+        </div>
+
+        <!-- Factories List -->
+        <div class="bg-white p-6 rounded-lg shadow">
+          <h2 class="text-xl font-semibold mb-4">All Factories</h2>
+          <div id="factoriesList" class="space-y-4"></div>
+        </div>
+      </section>
+
+      <!-- Products Section -->
+      <section id="products" class="section hidden">
+        <h1 class="text-3xl font-bold mb-6">Product Management</h1>
+        
+        <!-- Add Product Form -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+          <h2 class="text-xl font-semibold mb-4">Add New Product</h2>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <input type="text" id="productName" placeholder="Product Name *" class="p-3 border rounded-lg">
+            <input type="text" id="productCategory" placeholder="Category *" class="p-3 border rounded-lg">
+            <input type="text" id="productSubcategory" placeholder="Subcategory" class="p-3 border rounded-lg">
+            <input type="text" id="producerCompany" placeholder="Producer Company *" class="p-3 border rounded-lg">
+            <input type="number" id="productPrice" placeholder="Price" class="p-3 border rounded-lg">
+            <input type="text" id="productImage" placeholder="Image URL" class="p-3 border rounded-lg">
+          </div>
+          
+          <textarea id="productDescription" placeholder="Product Description" class="w-full p-3 border rounded-lg mb-4" rows="3"></textarea>
+          
+          <button onclick="saveProduct()" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700">
+            Save Product
+          </button>
+        </div>
+
+        <!-- Products List -->
+        <div class="bg-white p-6 rounded-lg shadow">
+          <h2 class="text-xl font-semibold mb-4">All Products</h2>
+          <div id="productsList" class="space-y-4"></div>
+        </div>
+      </section>
+
+      <!-- Events Section -->
+      <section id="events" class="section hidden">
+        <h1 class="text-3xl font-bold mb-6">Event Management</h1>
+        
+        <!-- Add Event Form -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+          <h2 class="text-xl font-semibold mb-4">Create New Event</h2>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <input type="text" id="eventTitle" placeholder="Event Title *" class="p-3 border rounded-lg">
+            <select id="eventType" class="p-3 border rounded-lg">
+              <option value="">Select Event Type *</option>
+              <option value="exhibition">Exhibition</option>
+              <option value="workshop">Workshop</option>
+              <option value="conference">Conference</option>
+              <option value="meeting">Meeting</option>
+              <option value="sale">Sale/Discount</option>
+              <option value="announcement">Announcement</option>
+            </select>
+            <input type="date" id="eventDate" placeholder="Event Date *" class="p-3 border rounded-lg">
+            <input type="time" id="eventTime" placeholder="Event Time" class="p-3 border rounded-lg">
+            <input type="text" id="eventLocation" placeholder="Location *" class="p-3 border rounded-lg">
+            <input type="text" id="eventOrganizer" placeholder="Organizer" class="p-3 border rounded-lg">
+          </div>
+          
+          <textarea id="eventDescription" placeholder="Event Description *" class="w-full p-3 border rounded-lg mb-4" rows="4"></textarea>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <input type="url" id="eventImage" placeholder="Event Image URL (optional)" class="p-3 border rounded-lg">
+            <input type="url" id="eventRegistrationLink" placeholder="Registration Link (optional)" class="p-3 border rounded-lg">
+          </div>
+          
+          <div class="flex items-center mb-4">
+            <input type="checkbox" id="eventIsActive" checked class="mr-2">
+            <label for="eventIsActive">Active Event</label>
+          </div>
+          
+          <button onclick="saveEvent()" class="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700">
+            <i class="fas fa-calendar-plus mr-2"></i>Create Event
+          </button>
+        </div>
+
+        <!-- Events List -->
+        <div class="bg-white p-6 rounded-lg shadow">
+          <h2 class="text-xl font-semibold mb-4">All Events</h2>
+          <div class="mb-4">
+            <select id="eventFilter" onchange="loadEvents()" class="p-2 border rounded-lg">
+              <option value="all">All Events</option>
+              <option value="active">Active Events</option>
+              <option value="past">Past Events</option>
+            </select>
+          </div>
+          <div id="eventsList" class="space-y-4"></div>
+        </div>
+      </section>
+
+      <!-- Notifications Section -->
+      <section id="notifications" class="section hidden">
+        <h1 class="text-3xl font-bold mb-6">Notification Management</h1>
+        
+        <!-- Send Notification Form -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+          <h2 class="text-xl font-semibold mb-4">Send New Notification</h2>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <input type="text" id="notificationTitle" placeholder="Notification Title *" class="p-3 border rounded-lg">
+            <select id="notificationType" class="p-3 border rounded-lg">
+              <option value="">Select Type *</option>
+              <option value="info">Information</option>
+              <option value="alert">Alert</option>
+              <option value="success">Success</option>
+              <option value="warning">Warning</option>
+              <option value="promotion">Promotion</option>
+              <option value="update">Update</option>
+            </select>
+          </div>
+          
+          <textarea id="notificationMessage" placeholder="Notification Message *" class="w-full p-3 border rounded-lg mb-4" rows="3"></textarea>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <select id="notificationTarget" class="p-3 border rounded-lg">
+              <option value="all">All Users</option>
+              <option value="specific">Specific User</option>
+              <option value="category">By Category Interest</option>
+            </select>
+            <input type="text" id="notificationTargetValue" placeholder="User Email or Category (if specific)" class="p-3 border rounded-lg">
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <select id="notificationPriority" class="p-3 border rounded-lg">
+              <option value="low">Low Priority</option>
+              <option value="medium">Medium Priority</option>
+              <option value="high">High Priority</option>
+              <option value="urgent">Urgent</option>
+            </select>
+            <input type="url" id="notificationLink" placeholder="Action Link (optional)" class="p-3 border rounded-lg">
+          </div>
+          
+          <button onclick="sendNotification()" class="bg-pink-600 text-white px-6 py-3 rounded-lg hover:bg-pink-700">
+            <i class="fas fa-paper-plane mr-2"></i>Send Notification
+          </button>
+        </div>
+
+        <!-- Notifications History -->
+        <div class="bg-white p-6 rounded-lg shadow">
+          <h2 class="text-xl font-semibold mb-4">Notification History</h2>
+          <div id="notificationsList" class="space-y-4"></div>
+        </div>
+      </section>
+
+      <!-- Users Section -->
+      <section id="users" class="section hidden">
+        <h1 class="text-3xl font-bold mb-6">User Management</h1>
+        <div class="bg-white p-6 rounded-lg shadow">
+          <div id="usersList" class="space-y-4"></div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+
+  <script>
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyCEA_n66W-Dt6eBoPe7QiaSUebEv8ctBaE",
+      authDomain: "sialconnect-5efb5.firebaseapp.com",
+      projectId: "sialconnect-5efb5",
+      storageBucket: "sialconnect-5efb5.appspot.com",
+      messagingSenderId: "660615885537",
+      appId: "1:660615885537:web:27e04abd3396adfcde3da0"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    // Helper Functions
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      const content = document.getElementById('toastContent');
+      content.textContent = message;
+      content.className = type === 'error' ? 
+        'bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg' : 
+        'bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg';
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+
+    function showLoading() {
+      document.getElementById('loadingSpinner').classList.add('active');
+    }
+
+    function hideLoading() {
+      document.getElementById('loadingSpinner').classList.remove('active');
+    }
+
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('active');
+    }
+
+    function showSection(sectionName) {
+      // Hide all sections
+      document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+      // Show selected section
+      document.getElementById(sectionName).classList.remove('hidden');
+      
+      // Update nav links
+      document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('bg-blue-600');
+        link.classList.add('hover:bg-gray-800');
+      });
+      event.target.closest('.nav-link').classList.add('bg-blue-600');
+      event.target.closest('.nav-link').classList.remove('hover:bg-gray-800');
+      
+      // Load section data
+      if (sectionName === 'dashboard') loadDashboard();
+      if (sectionName === 'categories') loadCategories();
+      if (sectionName === 'factories') loadFactories();
+      if (sectionName === 'products') loadProducts();
+       if (sectionName === 'events') loadEvents();
+      if (sectionName === 'notifications') loadNotifications();
+      if (sectionName === 'users') loadUsers();
+    }
+
+    // Authentication
+    async function handleLogin() {
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      
+      if (!email || !password) {
+        showToast('Please enter email and password', 'error');
+        return;
+      }
+      
+      showLoading();
+      
+      try {
+        await auth.signInWithEmailAndPassword(email, password);
+        showToast('Login successful!');
+      } catch (error) {
+        if (error.code === 'auth/user-not-found') {
+          // Create new account
+          try {
+            await auth.createUserWithEmailAndPassword(email, password);
+            showToast('Account created successfully!');
+          } catch (createError) {
+            hideLoading();
+            showToast(createError.message, 'error');
+          }
+        } else {
+          hideLoading();
+          showToast(error.message, 'error');
+        }
+      }
+    }
+
+function handleLogout() {
+  auth.signOut().then(() => {
+    alert("You have been logged out!");
+    window.location.href = "login.html"; // go back to login page
+  }).catch((error) => {
+    console.error("Logout error:", error);
+  });
+}
+
+
+    // Category Management Functions
+    function addItem() {
+      const container = document.getElementById('itemsContainer');
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'item-row border p-4 rounded-lg mb-4';
+      itemDiv.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+          <input type="text" placeholder="Item Name" class="item-name p-2 border rounded">
+          <input type="text" placeholder="Item Image URL" class="item-img p-2 border rounded">
+        </div>
+        
+        <h4 class="font-medium mb-2">Subcategories</h4>
+        <div class="subcategories-container">
+          <div class="subcategory-row grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
+            <input type="text" placeholder="Sub Name" class="sub-name p-2 border rounded text-sm">
+            <input type="text" placeholder="Sub Image URL" class="sub-img p-2 border rounded text-sm">
+            <input type="text" placeholder="Product Link" class="sub-link p-2 border rounded text-sm">
+          </div>
+        </div>
+        <button type="button" onclick="addSubcategory(this)" class="bg-gray-500 text-white px-3 py-1 rounded text-sm mr-2">
+          + Add Subcategory
+        </button>
+        <button type="button" onclick="removeItem(this)" class="bg-red-500 text-white px-3 py-1 rounded text-sm">
+          Remove Item
+        </button>
+      `;
+      container.appendChild(itemDiv);
+    }
+
+    function addEditItem() {
+      const container = document.getElementById('editItemsContainer');
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'item-row border p-4 rounded-lg mb-4';
+      itemDiv.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+          <input type="text" placeholder="Item Name" class="item-name p-2 border rounded">
+          <input type="text" placeholder="Item Image URL" class="item-img p-2 border rounded">
+        </div>
+        
+        <h4 class="font-medium mb-2">Subcategories</h4>
+        <div class="subcategories-container">
+          <div class="subcategory-row grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
+            <input type="text" placeholder="Sub Name" class="sub-name p-2 border rounded text-sm">
+            <input type="text" placeholder="Sub Image URL" class="sub-img p-2 border rounded text-sm">
+            <input type="text" placeholder="Product Link" class="sub-link p-2 border rounded text-sm">
+          </div>
+        </div>
+        <button type="button" onclick="addSubcategory(this)" class="bg-gray-500 text-white px-3 py-1 rounded text-sm mr-2">
+          + Add Subcategory
+        </button>
+        <button type="button" onclick="removeItem(this)" class="bg-red-500 text-white px-3 py-1 rounded text-sm">
+          Remove Item
+        </button>
+      `;
+      container.appendChild(itemDiv);
+    }
+
+    function addSubcategory(button) {
+      const container = button.parentElement.querySelector('.subcategories-container');
+      const subDiv = document.createElement('div');
+      subDiv.className = 'subcategory-row grid grid-cols-1 md:grid-cols-3 gap-2 mb-2';
+      subDiv.innerHTML = `
+        <input type="text" placeholder="Sub Name" class="sub-name p-2 border rounded text-sm">
+        <input type="text" placeholder="Sub Image URL" class="sub-img p-2 border rounded text-sm">
+        <input type="text" placeholder="Product Link" class="sub-link p-2 border rounded text-sm">
+        <button type="button" onclick="removeSubcategory(this)" class="bg-red-400 text-white px-2 py-1 rounded text-xs">Remove</button>
+      `;
+      container.appendChild(subDiv);
+    }
+
+    function removeItem(button) {
+      button.parentElement.remove();
+    }
+
+    function removeSubcategory(button) {
+      button.parentElement.remove();
+    }
+
+    async function saveCategory() {
+      const categoryKey = document.getElementById('categoryKey').value.trim();
+      const categoryName = document.getElementById('categoryName').value.trim();
+      
+      if (!categoryKey || !categoryName) {
+        showToast('Please enter category key and name', 'error');
+        return;
+      }
+      
+      // Collect items
+      const items = [];
+      const itemRows = document.querySelectorAll('#itemsContainer .item-row');
+      
+      itemRows.forEach(row => {
+        const itemName = row.querySelector('.item-name').value.trim();
+        const itemImg = row.querySelector('.item-img').value.trim();
+        
+        if (itemName) {
+          const item = { name: itemName, img: itemImg || 'https://via.placeholder.com/100', sub: [] };
+          
+          // Collect subcategories
+          const subRows = row.querySelectorAll('.subcategory-row');
+          subRows.forEach(subRow => {
+            const subName = subRow.querySelector('.sub-name').value.trim();
+            const subImg = subRow.querySelector('.sub-img').value.trim();
+            const subLink = subRow.querySelector('.sub-link').value.trim();
+            
+            if (subName) {
+              item.sub.push({
+                name: subName,
+                img: subImg || 'https://via.placeholder.com/100',
+                link: subLink || 'product1.html'
+              });
+            }
+          });
+          
+          items.push(item);
+        }
+      });
+      
+      try {
+        showLoading();
+        
+        await db.collection('categories').doc(categoryKey).set({
+          name: categoryName,
+          items: items,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // Clear form
+        document.getElementById('categoryKey').value = '';
+        document.getElementById('categoryName').value = '';
+        document.getElementById('itemsContainer').innerHTML = `
+          <div class="item-row border p-4 rounded-lg mb-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+              <input type="text" placeholder="Item Name" class="item-name p-2 border rounded">
+              <input type="text" placeholder="Item Image URL" class="item-img p-2 border rounded">
+            </div>
+            
+            <h4 class="font-medium mb-2">Subcategories</h4>
+            <div class="subcategories-container">
+              <div class="subcategory-row grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
+                <input type="text" placeholder="Sub Name" class="sub-name p-2 border rounded text-sm">
+                <input type="text" placeholder="Sub Image URL" class="sub-img p-2 border rounded text-sm">
+                <input type="text" placeholder="Product Link" class="sub-link p-2 border rounded text-sm">
+              </div>
+            </div>
+            <button type="button" onclick="addSubcategory(this)" class="bg-gray-500 text-white px-3 py-1 rounded text-sm mr-2">
+              + Add Subcategory
+            </button>
+            <button type="button" onclick="removeItem(this)" class="bg-red-500 text-white px-3 py-1 rounded text-sm">
+              Remove Item
+            </button>
+          </div>
+        `;
+        
+        showToast('Category saved successfully!');
+        loadCategories();
+        
+      } catch (error) {
+        showToast('Error: ' + error.message, 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    async function loadCategories() {
+      try {
+        const snapshot = await db.collection('categories').orderBy('createdAt', 'desc').get();
+        const list = document.getElementById('categoriesList');
+        list.innerHTML = '';
+        
+        if (snapshot.empty) {
+          list.innerHTML = '<p class="text-gray-500">No categories found</p>';
+          return;
+        }
+        
+        snapshot.forEach(doc => {
+          const category = doc.data();
+          const itemCount = category.items ? category.items.length : 0;
+          list.innerHTML += `
+            <div class="border p-4 rounded-lg">
+              <div class="flex justify-between items-start">
+                <div>
+                  <h3 class="font-semibold text-lg">${category.name}</h3>
+                  <p class="text-gray-600">Key: ${doc.id}</p>
+                  <p class="text-sm text-gray-500">${itemCount} items</p>
+                </div>
+                <div class="flex gap-2">
+                  <button onclick="editCategory('${doc.id}')" class="text-blue-500 hover:text-blue-700">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button onclick="deleteCategory('${doc.id}')" class="text-red-500 hover:text-red-700">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+      } catch (error) {
+        console.error('Error loading categories:', error);
+      }
+    }
+
+    async function editCategory(id) {
+      try {
+        showLoading();
+        const doc = await db.collection('categories').doc(id).get();
+        if (!doc.exists) {
+          showToast('Category not found', 'error');
+          return;
+        }
+        
+        const category = doc.data();
+        document.getElementById('editCategoryKey').value = id;
+        document.getElementById('editCategoryName').value = category.name;
+        
+        // Load items
+        const container = document.getElementById('editItemsContainer');
+        container.innerHTML = '';
+        
+        if (category.items && category.items.length > 0) {
+          category.items.forEach(item => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'item-row border p-4 rounded-lg mb-4';
+            
+            let subcategoriesHTML = '';
+            if (item.sub && item.sub.length > 0) {
+              item.sub.forEach(sub => {
+                subcategoriesHTML += `
+                  <div class="subcategory-row grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
+                    <input type="text" placeholder="Sub Name" class="sub-name p-2 border rounded text-sm" value="${sub.name}">
+                    <input type="text" placeholder="Sub Image URL" class="sub-img p-2 border rounded text-sm" value="${sub.img}">
+                    <input type="text" placeholder="Product Link" class="sub-link p-2 border rounded text-sm" value="${sub.link}">
+                    <button type="button" onclick="removeSubcategory(this)" class="bg-red-400 text-white px-2 py-1 rounded text-xs">Remove</button>
+                  </div>
+                `;
+              });
+            }
+            
+            itemDiv.innerHTML = `
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                <input type="text" placeholder="Item Name" class="item-name p-2 border rounded" value="${item.name}">
+                <input type="text" placeholder="Item Image URL" class="item-img p-2 border rounded" value="${item.img}">
+              </div>
+              
+              <h4 class="font-medium mb-2">Subcategories</h4>
+              <div class="subcategories-container">
+                ${subcategoriesHTML}
+              </div>
+              <button type="button" onclick="addSubcategory(this)" class="bg-gray-500 text-white px-3 py-1 rounded text-sm mr-2">
+                + Add Subcategory
+              </button>
+              <button type="button" onclick="removeItem(this)" class="bg-red-500 text-white px-3 py-1 rounded text-sm">
+                Remove Item
+              </button>
+            `;
+            container.appendChild(itemDiv);
+          });
+        }
+        
+        document.getElementById('editCategoryModal').classList.add('active');
+      } catch (error) {
+        showToast('Error: ' + error.message, 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    function closeEditCategoryModal() {
+      document.getElementById('editCategoryModal').classList.remove('active');
+    }
+
+    async function updateCategory() {
+      const categoryKey = document.getElementById('editCategoryKey').value;
+      const categoryName = document.getElementById('editCategoryName').value.trim();
+      
+      if (!categoryName) {
+        showToast('Please enter category name', 'error');
+        return;
+      }
+      
+      // Collect items
+      const items = [];
+      const itemRows = document.querySelectorAll('#editItemsContainer .item-row');
+      
+      itemRows.forEach(row => {
+        const itemName = row.querySelector('.item-name').value.trim();
+        const itemImg = row.querySelector('.item-img').value.trim();
+        
+        if (itemName) {
+          const item = { name: itemName, img: itemImg || 'https://via.placeholder.com/100', sub: [] };
+          
+          // Collect subcategories
+          const subRows = row.querySelectorAll('.subcategory-row');
+          subRows.forEach(subRow => {
+            const subName = subRow.querySelector('.sub-name').value.trim();
+            const subImg = subRow.querySelector('.sub-img').value.trim();
+            const subLink = subRow.querySelector('.sub-link').value.trim();
+            
+            if (subName) {
+              item.sub.push({
+                name: subName,
+                img: subImg || 'https://via.placeholder.com/100',
+                link: subLink || 'product1.html'
+              });
+            }
+          });
+          
+          items.push(item);
+        }
+      });
+      
+      try {
+        showLoading();
+        
+        await db.collection('categories').doc(categoryKey).update({
+          name: categoryName,
+          items: items,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        closeEditCategoryModal();
+        showToast('Category updated successfully!');
+        loadCategories();
+        
+      } catch (error) {
+        showToast('Error: ' + error.message, 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    async function deleteCategory(id) {
+      if (!confirm('Are you sure you want to delete this category?')) return;
+      
+      try {
+        showLoading();
+        await db.collection('categories').doc(id).delete();
+        showToast('Category deleted successfully!');
+        loadCategories();
+      } catch (error) {
+        showToast('Error: ' + error.message, 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    // Factory Management
+    // Factory Management
+async function saveFactory() {
+  const name = document.getElementById('factoryName').value.trim();
+  const category = document.getElementById('factoryCategory').value.trim();
+  const address = document.getElementById('factoryAddress').value.trim();
+  const phone = document.getElementById('factoryPhone').value.trim();
+  const email = document.getElementById('factoryEmail').value.trim();
+  const website = document.getElementById('factoryWebsite').value.trim();
+  const logo = document.getElementById('factoryLogo').value.trim(); // Add this line
+  
+  if (!name || !category || !address || !phone || !email) {
+    showToast('Please fill all required fields', 'error');
+    return;
+  }
+  
+  try {
+    showLoading();
+    
+    // If no logo provided, create placeholder
+    let logoUrl = logo;
+    if (!logoUrl || logoUrl.length === 0) {
+      logoUrl = 'https://via.placeholder.com/200x200?text=' + encodeURIComponent(name.substring(0, 2).toUpperCase());
+    }
+    
+    await db.collection('factories').add({
+      name,
+      category,
+      address,
+      phone,
+      email,
+      website,
+      logo: logoUrl, // Add this line
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    
+    // Clear form
+    document.getElementById('factoryName').value = '';
+    document.getElementById('factoryCategory').value = '';
+    document.getElementById('factoryAddress').value = '';
+    document.getElementById('factoryPhone').value = '';
+    document.getElementById('factoryEmail').value = '';
+    document.getElementById('factoryWebsite').value = '';
+    document.getElementById('factoryLogo').value = ''; // Add this line
+    
+    // Clear file upload if you have it
+    if (document.getElementById('factoryLogoFile')) {
+      document.getElementById('factoryLogoFile').value = '';
+    }
+    if (document.getElementById('factoryLogoPreview')) {
+      document.getElementById('factoryLogoPreview').src = '';
+      document.getElementById('factoryLogoPreview').classList.add('hidden');
+    }
+    
+    showToast('Factory saved successfully!');
+    loadFactories();
+    
+  } catch (error) {
+    showToast('Error: ' + error.message, 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+async function loadFactories() {
+  try {
+    const snapshot = await db.collection('factories').orderBy('createdAt', 'desc').get();
+    const list = document.getElementById('factoriesList');
+    list.innerHTML = '';
+    
+    if (snapshot.empty) {
+      list.innerHTML = '<p class="text-gray-500">No factories found</p>';
+      return;
+    }
+    
+    snapshot.forEach(doc => {
+      const factory = doc.data();
+      const defaultLogo = 'https://via.placeholder.com/80x80?text=' + encodeURIComponent(factory.name.substring(0, 2).toUpperCase());
+      
+      list.innerHTML += `
+        <div class="border p-4 rounded-lg">
+          <div class="flex justify-between items-start">
+            <div class="flex gap-4">
+              <div class="flex-shrink-0">
+                <img src="${factory.logo || defaultLogo}" 
+                     alt="${factory.name} logo" 
+                     onerror="this.src='${defaultLogo}'"
+                     class="w-20 h-20 object-cover rounded-lg border">
+              </div>
+              <div>
+                <h3 class="font-semibold text-lg">${factory.name}</h3>
+                <p class="text-gray-600">${factory.category}</p>
+                <p class="text-sm text-gray-500 mt-2">
+                  <i class="fas fa-map-marker-alt mr-1"></i>${factory.address}<br>
+                  <i class="fas fa-phone mr-1"></i>${factory.phone}<br>
+                  <i class="fas fa-envelope mr-1"></i>${factory.email}
+                  ${factory.website ? `<br><i class="fas fa-globe mr-1"></i>${factory.website}` : ''}
+                </p>
+              </div>
+            </div>
+            <button onclick="deleteFactory('${doc.id}')" class="text-red-500 hover:text-red-700">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    });
+  } catch (error) {
+    console.error('Error loading factories:', error);
+  }
+}
+
+// Add this function if you want file upload support
+function handleFactoryLogoUpload() {
+  const file = document.getElementById('factoryLogoFile').files[0];
+  if (file) {
+    // Check file size (limit to 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      showToast('Logo file size must be less than 2MB', 'error');
+      return;
+    }
+    
+    // Preview the image
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('factoryLogoPreview').src = e.target.result;
+      document.getElementById('factoryLogoPreview').classList.remove('hidden');
+      // Store base64 in the URL field
+      document.getElementById('factoryLogo').value = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+async function deleteFactory(id) {
+  if (!confirm('Are you sure you want to delete this factory?')) return;
+  
+  try {
+    showLoading();
+    await db.collection('factories').doc(id).delete();
+    showToast('Factory deleted successfully!');
+    loadFactories();
+  } catch (error) {
+    showToast('Error: ' + error.message, 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+    // Product Management
+    async function saveProduct() {
+      const name = document.getElementById('productName').value.trim();
+      const category = document.getElementById('productCategory').value.trim();
+      const subcategory = document.getElementById('productSubcategory').value.trim();
+      const company = document.getElementById('producerCompany').value.trim();
+      const price = document.getElementById('productPrice').value;
+      const image = document.getElementById('productImage').value.trim();
+      const description = document.getElementById('productDescription').value.trim();
+      
+      if (!name || !category || !company) {
+        showToast('Please fill all required fields', 'error');
+        return;
+      }
+      
+      try {
+        showLoading();
+        
+        await db.collection('products').add({
+          name,
+          category,
+          subcategory,
+          company,
+          price: price ? parseFloat(price) : null,
+          image: image || 'https://via.placeholder.com/300',
+          description,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // Clear form
+        document.getElementById('productName').value = '';
+        document.getElementById('productCategory').value = '';
+        document.getElementById('productSubcategory').value = '';
+        document.getElementById('producerCompany').value = '';
+        document.getElementById('productPrice').value = '';
+        document.getElementById('productImage').value = '';
+        document.getElementById('productDescription').value = '';
+        
+        showToast('Product saved successfully!');
+        loadProducts();
+        
+      } catch (error) {
+        showToast('Error: ' + error.message, 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    async function loadProducts() {
+      try {
+        const snapshot = await db.collection('products').orderBy('createdAt', 'desc').get();
+        const list = document.getElementById('productsList');
+        list.innerHTML = '';
+             
+        
+        if (snapshot.empty) {
+          list.innerHTML = '<p class="text-gray-500">No products found</p>';
+          return;
+        }
+        
+        snapshot.forEach(doc => {
+          const product = doc.data();
+          list.innerHTML += `
+            <div class="border p-4 rounded-lg">
+              <div class="flex justify-between items-start">
+                <div class="flex-1">
+                  <h3 class="font-semibold text-lg">${product.name}</h3>
+                  <p class="text-gray-600">${product.category} ${product.subcategory ? '/ ' + product.subcategory : ''}</p>
+                  <p class="text-sm text-gray-500">Company: ${product.company}</p>
+                  ${product.price ? `<p class="text-sm font-semibold text-green-600">Price: ${product.price}</p>` : ''}
+                  ${product.description ? `<p class="text-sm text-gray-600 mt-1">${product.description.substring(0, 100)}...</p>` : ''}
+                </div>
+                <div class="flex gap-2">
+                  <button onclick="editProduct('${doc.id}')" class="text-blue-500 hover:text-blue-700">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button onclick="deleteProduct('${doc.id}')" class="text-red-500 hover:text-red-700">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+      } catch (error) {
+        console.error('Error loading products:', error);
+      }
+    }
+
+    async function editProduct(id) {
+      try {
+        showLoading();
+        const doc = await db.collection('products').doc(id).get();
+        if (!doc.exists) {
+          showToast('Product not found', 'error');
+          return;
+        }
+        
+        const product = doc.data();
+        document.getElementById('editProductId').value = id;
+        document.getElementById('editProductName').value = product.name || '';
+        document.getElementById('editProductCategory').value = product.category || '';
+        document.getElementById('editProductSubcategory').value = product.subcategory || '';
+        document.getElementById('editProducerCompany').value = product.company || '';
+        document.getElementById('editProductPrice').value = product.price || '';
+        document.getElementById('editProductImage').value = product.image || '';
+        document.getElementById('editProductDescription').value = product.description || '';
+        
+        document.getElementById('editProductModal').classList.add('active');
+      } catch (error) {
+        showToast('Error: ' + error.message, 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    function closeEditProductModal() {
+      document.getElementById('editProductModal').classList.remove('active');
+    }
+
+    async function updateProduct() {
+      const productId = document.getElementById('editProductId').value;
+      const name = document.getElementById('editProductName').value.trim();
+      const category = document.getElementById('editProductCategory').value.trim();
+      const subcategory = document.getElementById('editProductSubcategory').value.trim();
+      const company = document.getElementById('editProducerCompany').value.trim();
+      const price = document.getElementById('editProductPrice').value;
+      const image = document.getElementById('editProductImage').value.trim();
+      const description = document.getElementById('editProductDescription').value.trim();
+      
+      if (!name || !category || !company) {
+        showToast('Please fill all required fields', 'error');
+        return;
+      }
+      
+      try {
+        showLoading();
+        
+        await db.collection('products').doc(productId).update({
+          name,
+          category,
+          subcategory,
+          company,
+          price: price ? parseFloat(price) : null,
+          image: image || 'https://via.placeholder.com/300',
+          description,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        closeEditProductModal();
+        showToast('Product updated successfully!');
+        loadProducts();
+        
+      } catch (error) {
+        showToast('Error: ' + error.message, 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    async function deleteProduct(id) {
+      if (!confirm('Are you sure you want to delete this product?')) return;
+      
+      try {
+        showLoading();
+        await db.collection('products').doc(id).delete();
+        showToast('Product deleted successfully!');
+        loadProducts();
+      } catch (error) {
+        showToast('Error: ' + error.message, 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+
+    // Event Management Functions
+    async function saveEvent() {
+      const title = document.getElementById('eventTitle').value.trim();
+      const type = document.getElementById('eventType').value;
+      const date = document.getElementById('eventDate').value;
+      const time = document.getElementById('eventTime').value;
+      const location = document.getElementById('eventLocation').value.trim();
+      const organizer = document.getElementById('eventOrganizer').value.trim();
+      const description = document.getElementById('eventDescription').value.trim();
+      const image = document.getElementById('eventImage').value.trim();
+      const registrationLink = document.getElementById('eventRegistrationLink').value.trim();
+      const isActive = document.getElementById('eventIsActive').checked;
+      
+      if (!title || !type || !date || !location || !description) {
+        showToast('Please fill all required fields', 'error');
+        return;
+      }
+      
+      try {
+        showLoading();
+        
+        const eventData = {
+          title,
+          type,
+          date,
+          time: time || '00:00',
+          location,
+          organizer: organizer || 'SialConnect',
+          description,
+          image: image || 'https://via.placeholder.com/600x300?text=Event',
+          registrationLink,
+          isActive,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          createdBy: auth.currentUser.email
+        };
+        
+        await db.collection('events').add(eventData);
+        
+        // Clear form
+        document.getElementById('eventTitle').value = '';
+        document.getElementById('eventType').value = '';
+        document.getElementById('eventDate').value = '';
+        document.getElementById('eventTime').value = '';
+        document.getElementById('eventLocation').value = '';
+        document.getElementById('eventOrganizer').value = '';
+        document.getElementById('eventDescription').value = '';
+        document.getElementById('eventImage').value = '';
+        document.getElementById('eventRegistrationLink').value = '';
+        
+        showToast('Event created successfully!');
+        loadEvents();
+        
+      } catch (error) {
+        showToast('Error: ' + error.message, 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    async function loadEvents() {
+      try {
+        const filter = document.getElementById('eventFilter')?.value || 'all';
+        let query = db.collection('events').orderBy('date', 'desc');
+        
+        if (filter === 'active') {
+          query = query.where('isActive', '==', true);
+        }
+        
+        const snapshot = await query.get();
+        const list = document.getElementById('eventsList');
+        list.innerHTML = '';
+        
+        if (snapshot.empty) {
+          list.innerHTML = '<p class="text-gray-500">No events found</p>';
+          return;
+        }
+        
+        const today = new Date().toISOString().split('T')[0];
+        
+        snapshot.forEach(doc => {
+          const event = doc.data();
+          const isPast = event.date < today;
+          const statusBadge = event.isActive && !isPast ? 
+            '<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Active</span>' : 
+            '<span class="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded">Inactive</span>';
+          
+          list.innerHTML += `
+            <div class="border p-4 rounded-lg ${isPast ? 'bg-gray-50' : ''}">
+              <div class="flex justify-between items-start">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-2">
+                    <h3 class="font-semibold text-lg">${event.title}</h3>
+                    ${statusBadge}
+                    <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">${event.type}</span>
+                  </div>
+                  <p class="text-gray-600 mb-1"><i class="fas fa-calendar mr-2"></i>${event.date} ${event.time}</p>
+                  <p class="text-gray-600 mb-1"><i class="fas fa-map-marker-alt mr-2"></i>${event.location}</p>
+                  <p class="text-gray-600 mb-2"><i class="fas fa-user mr-2"></i>${event.organizer}</p>
+                  <p class="text-sm text-gray-700">${event.description.substring(0, 150)}...</p>
+                  ${event.registrationLink ? `<a href="${event.registrationLink}" target="_blank" class="text-blue-600 text-sm hover:underline mt-2 inline-block">Registration Link</a>` : ''}
+                </div>
+                <div class="flex gap-2">
+                  <button onclick="toggleEventStatus('${doc.id}', ${event.isActive})" class="text-yellow-500 hover:text-yellow-700">
+                    <i class="fas fa-toggle-${event.isActive ? 'on' : 'off'}"></i>
+                  </button>
+                  <button onclick="deleteEvent('${doc.id}')" class="text-red-500 hover:text-red-700">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+      } catch (error) {
+        console.error('Error loading events:', error);
+      }
+    }
+
+    async function toggleEventStatus(id, currentStatus) {
+      try {
+        showLoading();
+        await db.collection('events').doc(id).update({
+          isActive: !currentStatus
+        });
+        showToast('Event status updated!');
+        loadEvents();
+      } catch (error) {
+        showToast('Error: ' + error.message, 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    async function deleteEvent(id) {
+      if (!confirm('Are you sure you want to delete this event?')) return;
+      
+      try {
+        showLoading();
+        await db.collection('events').doc(id).delete();
+        showToast('Event deleted successfully!');
+        loadEvents();
+      } catch (error) {
+        showToast('Error: ' + error.message, 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    // Notification Management Functions
+    async function sendNotification() {
+      const title = document.getElementById('notificationTitle').value.trim();
+      const type = document.getElementById('notificationType').value;
+      const message = document.getElementById('notificationMessage').value.trim();
+      const target = document.getElementById('notificationTarget').value;
+      const targetValue = document.getElementById('notificationTargetValue').value.trim();
+      const priority = document.getElementById('notificationPriority').value;
+      const link = document.getElementById('notificationLink').value.trim();
+      
+      if (!title || !type || !message) {
+        showToast('Please fill all required fields', 'error');
+        return;
+      }
+      
+      if (target === 'specific' && !targetValue) {
+        showToast('Please enter user email for specific notification', 'error');
+        return;
+      }
+      
+      try {
+        showLoading();
+        
+        const notificationData = {
+          title,
+          type,
+          message,
+          target,
+          targetValue: targetValue || null,
+          priority,
+          link: link || null,
+          isRead: false,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          createdBy: auth.currentUser.email
+        };
+        
+        // Save to main notifications collection
+        const notificationRef = await db.collection('notifications').add(notificationData);
+        
+        // If targeting all users or specific user, also add to user_notifications
+        if (target === 'all') {
+          // Get all users
+          const usersSnapshot = await db.collection('users').get();
+          const batch = db.batch();
+          
+          usersSnapshot.forEach(userDoc => {
+            const userNotifRef = db.collection('user_notifications').doc();
+            batch.set(userNotifRef, {
+              ...notificationData,
+              userId: userDoc.id,
+              userEmail: userDoc.data().email,
+              notificationId: notificationRef.id
+            });
+          });
+          
+          await batch.commit();
+        } else if (target === 'specific') {
+          // Find specific user
+          const userQuery = await db.collection('users').where('email', '==', targetValue).get();
+          if (!userQuery.empty) {
+            const userDoc = userQuery.docs[0];
+            await db.collection('user_notifications').add({
+              ...notificationData,
+              userId: userDoc.id,
+              userEmail: targetValue,
+              notificationId: notificationRef.id
+            });
+          }
+        }
+        
+        // Clear form
+        document.getElementById('notificationTitle').value = '';
+        document.getElementById('notificationType').value = '';
+        document.getElementById('notificationMessage').value = '';
+        document.getElementById('notificationTarget').value = 'all';
+        document.getElementById('notificationTargetValue').value = '';
+        document.getElementById('notificationPriority').value = 'low';
+        document.getElementById('notificationLink').value = '';
+        
+        showToast('Notification sent successfully!');
+        loadNotifications();
+        
+      } catch (error) {
+        showToast('Error: ' + error.message, 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    async function loadNotifications() {
+      try {
+        const snapshot = await db.collection('notifications').orderBy('createdAt', 'desc').limit(50).get();
+        const list = document.getElementById('notificationsList');
+        list.innerHTML = '';
+        
+        if (snapshot.empty) {
+          list.innerHTML = '<p class="text-gray-500">No notifications sent yet</p>';
+          return;
+        }
+        
+        snapshot.forEach(doc => {
+          const notification = doc.data();
+          const typeColor = {
+            info: 'blue',
+            alert: 'red',
+            success: 'green',
+            warning: 'yellow',
+            promotion: 'purple',
+            update: 'indigo'
+          }[notification.type] || 'gray';
+          
+          const priorityBadge = {
+            low: '<span class="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded">Low</span>',
+            medium: '<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">Medium</span>',
+            high: '<span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">High</span>',
+            urgent: '<span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">Urgent</span>'
+          }[notification.priority];
+          
+          const createdAt = notification.createdAt ? new Date(notification.createdAt.toDate()).toLocaleString() : 'Just now';
+          
+          list.innerHTML += `
+            <div class="border-l-4 border-${typeColor}-500 p-4 rounded-lg bg-white shadow-sm">
+              <div class="flex justify-between items-start">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-2">
+                    <h3 class="font-semibold">${notification.title}</h3>
+                    <span class="bg-${typeColor}-100 text-${typeColor}-800 text-xs px-2 py-1 rounded">${notification.type}</span>
+                    ${priorityBadge}
+                  </div>
+                  <p class="text-gray-700 mb-2">${notification.message}</p>
+                  <div class="text-xs text-gray-500">
+                    <span class="mr-3"><i class="fas fa-user mr-1"></i>${notification.createdBy}</span>
+                    <span class="mr-3"><i class="fas fa-clock mr-1"></i>${createdAt}</span>
+                    <span><i class="fas fa-bullseye mr-1"></i>${notification.target === 'all' ? 'All Users' : notification.target === 'specific' ? `Specific: ${notification.targetValue}` : `Category: ${notification.targetValue}`}</span>
+                  </div>
+                  ${notification.link ? `<a href="${notification.link}" target="_blank" class="text-blue-600 text-sm hover:underline mt-2 inline-block">Action Link</a>` : ''}
+                </div>
+                <button onclick="deleteNotification('${doc.id}')" class="text-red-500 hover:text-red-700">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          `;
+        });
+      } catch (error) {
+        console.error('Error loading notifications:', error);
+      }
+    }
+
+    async function deleteNotification(id) {
+      if (!confirm('Are you sure you want to delete this notification?')) return;
+      
+      try {
+        showLoading();
+        await db.collection('notifications').doc(id).delete();
+        // Also delete from user_notifications
+        const userNotifs = await db.collection('user_notifications').where('notificationId', '==', id).get();
+        const batch = db.batch();
+        userNotifs.forEach(doc => {
+          batch.delete(doc.ref);
+        });
+        await batch.commit();
+        
+        showToast('Notification deleted successfully!');
+        loadNotifications();
+      } catch (error) {
+        showToast('Error: ' + error.message, 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+    // Load Dashboard
+    async function loadDashboard() {
+      try {
+        const [categories, factories, products, users] = await Promise.all([
+          db.collection('categories').get(),
+          db.collection('factories').get(),
+          db.collection('products').get(),
+          db.collection('users').get()
+        ]);
+        
+        document.getElementById('categoryCount').textContent = categories.size;
+        document.getElementById('factoryCount').textContent = factories.size;
+        document.getElementById('productCount').textContent = products.size;
+        document.getElementById('userCount').textContent = users.size;
+      } catch (error) {
+        console.error('Error loading dashboard:', error);
+      }
+    }
+
+    // Load Users
+    async function loadUsers() {
+      try {
+        const snapshot = await db.collection('users').get();
+        const list = document.getElementById('usersList');
+        list.innerHTML = '';
+        
+        if (snapshot.empty) {
+          list.innerHTML = '<p class="text-gray-500">No users found</p>';
+          return;
+        }
+        
+        snapshot.forEach(doc => {
+          const user = doc.data();
+          list.innerHTML += `
+            <div class="border p-4 rounded-lg">
+              <p class="font-semibold">${user.email || user.name || 'Unknown User'}</p>
+              <p class="text-sm text-gray-500">ID: ${doc.id}</p>
+            </div>
+          `;
+        });
+      } catch (error) {
+        console.error('Error loading users:', error);
+      }
+    }
+
+    // Auth State Observer
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        document.getElementById('loginModal').classList.add('hidden');
+        document.getElementById('mainContent').classList.remove('hidden');
+        hideLoading();
+        loadDashboard();
+      } else {
+        document.getElementById('loginModal').classList.remove('hidden');
+        document.getElementById('mainContent').classList.add('hidden');
+      }
+    });
+  </script>
+</body>
+</html>

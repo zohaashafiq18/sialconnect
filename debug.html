@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Firebase Debug Test</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Firebase v9 compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+</head>
+<body class="bg-gray-100 p-8">
+  <div class="max-w-4xl mx-auto">
+    <h1 class="text-3xl font-bold mb-8">Firebase Connection Debug Test</h1>
+    
+    <!-- Status Panel -->
+    <div class="bg-white rounded-lg p-6 mb-6 shadow">
+      <h2 class="text-xl font-semibold mb-4">Connection Status</h2>
+      <div id="statusPanel" class="space-y-2">
+        <div class="flex items-center">
+          <span class="w-3 h-3 rounded-full bg-gray-400 mr-3" id="firebaseStatus"></span>
+          <span>Firebase Initialization: <span id="firebaseText" class="font-mono">Checking...</span></span>
+        </div>
+        <div class="flex items-center">
+          <span class="w-3 h-3 rounded-full bg-gray-400 mr-3" id="authStatus"></span>
+          <span>Authentication: <span id="authText" class="font-mono">Checking...</span></span>
+        </div>
+        <div class="flex items-center">
+          <span class="w-3 h-3 rounded-full bg-gray-400 mr-3" id="firestoreStatus"></span>
+          <span>Firestore: <span id="firestoreText" class="font-mono">Checking...</span></span>
+        </div>
+        <div class="flex items-center">
+          <span class="w-3 h-3 rounded-full bg-gray-400 mr-3" id="storageStatus"></span>
+          <span>Storage: <span id="storageText" class="font-mono">Checking...</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test Actions -->
+    <div class="bg-white rounded-lg p-6 mb-6 shadow">
+      <h2 class="text-xl font-semibold mb-4">Test Actions</h2>
+      <div class="space-y-4">
+        <button onclick="testAnonymousAuth()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+          1. Test Anonymous Login
+        </button>
+        <button onclick="testFirestoreWrite()" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
+          2. Test Firestore Write
+        </button>
+        <button onclick="testFirestoreRead()" class="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600">
+          3. Test Firestore Read
+        </button>
+        <button onclick="testDirectSave()" class="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600">
+          4. Test Direct Factory Save
+        </button>
+      </div>
+    </div>
+
+    <!-- Simple Factory Form -->
+    <div class="bg-white rounded-lg p-6 mb-6 shadow">
+      <h2 class="text-xl font-semibold mb-4">Simple Factory Test</h2>
+      <div class="space-y-4">
+        <input type="text" id="factoryName" placeholder="Factory Name" class="w-full p-2 border rounded">
+        <input type="text" id="factoryCategory" placeholder="Category" class="w-full p-2 border rounded">
+        <button onclick="saveSimpleFactory()" class="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600">
+          Save Factory (No Auth Required)
+        </button>
+      </div>
+    </div>
+
+    <!-- Console Output -->
+    <div class="bg-black text-green-400 rounded-lg p-6 shadow font-mono text-sm">
+      <h2 class="text-xl mb-4">Console Output</h2>
+      <div id="consoleOutput" class="space-y-1 max-h-96 overflow-y-auto"></div>
+    </div>
+  </div>
+
+  <script>
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyCEA_n66W-Dt6eBoPe7QiaSUebEv8ctBaE",
+      authDomain: "sialconnect-5efb5.firebaseapp.com",
+      projectId: "sialconnect-5efb5",
+      storageBucket: "sialconnect-5efb5.appspot.com",
+      messagingSenderId: "660615885537",
+      appId: "1:660615885537:web:27e04abd3396adfcde3da0"
+    };
+
+    let app, auth, db, storage;
+    
+    function log(message, type = 'info') {
+      const output = document.getElementById('consoleOutput');
+      const time = new Date().toLocaleTimeString();
+      const color = type === 'error' ? 'text-red-400' : type === 'success' ? 'text-green-400' : 'text-gray-300';
+      output.innerHTML += `<div class="${color}">[${time}] ${message}</div>`;
+      output.scrollTop = output.scrollHeight;
+      console.log(message);
+    }
+
+    function updateStatus(service, status) {
+      const statusEl = document.getElementById(service + 'Status');
+      const textEl = document.getElementById(service + 'Text');
+      
+      if (status === 'success') {
+        statusEl.className = 'w-3 h-3 rounded-full bg-green-500 mr-3';
+        textEl.textContent = 'Connected';
+        textEl.className = 'font-mono text-green-600';
+      } else if (status === 'error') {
+        statusEl.className = 'w-3 h-3 rounded-full bg-red-500 mr-3';
+        textEl.textContent = 'Error';
+        textEl.className = 'font-mono text-red-600';
+      } else {
+        statusEl.className = 'w-3 h-3 rounded-full bg-yellow-500 mr-3';
+        textEl.textContent = 'Checking...';
+        textEl.className = 'font-mono text-yellow-600';
+      }
+    }
+
+    // Initialize Firebase
+    try {
+      log('Initializing Firebase...');
+      app = firebase.initializeApp(firebaseConfig);
+      log('✓ Firebase initialized successfully', 'success');
+      updateStatus('firebase', 'success');
+      
+      // Initialize services
+      auth = firebase.auth();
+      log('✓ Auth service initialized', 'success');
+      updateStatus('auth', 'success');
+      
+      db = firebase.firestore();
+      log('✓ Firestore service initialized', 'success');
+      updateStatus('firestore', 'success');
+      
+      storage = firebase.storage();
+      log('✓ Storage service initialized', 'success');
+      updateStatus('storage', 'success');
+      
+    } catch (error) {
+      log('✗ Firebase initialization error: ' + error.message, 'error');
+      updateStatus('firebase', 'error');
+    }
+
+    // Test Functions
+    async function testAnonymousAuth() {
+      log('Testing anonymous authentication...');
+      try {
+        const result = await auth.signInAnonymously();
+        log('✓ Anonymous auth successful! UID: ' + result.user.uid, 'success');
+        return true;
+      } catch (error) {
+        log('✗ Auth error: ' + error.message + ' (Code: ' + error.code + ')', 'error');
+        log('Tip: Enable Anonymous auth in Firebase Console > Authentication > Sign-in method', 'error');
+        return false;
+      }
+    }
+
+    async function testFirestoreWrite() {
+      log('Testing Firestore write...');
+      try {
+        const testData = {
+          test: true,
+          timestamp: new Date().toISOString(),
+          message: 'Test write from debug panel'
+        };
+        
+        const docRef = await db.collection('test').add(testData);
+        log('✓ Firestore write successful! Doc ID: ' + docRef.id, 'success');
+        return true;
+      } catch (error) {
+        log('✗ Firestore write error: ' + error.message, 'error');
+        log('Tip: Check Firestore rules in Firebase Console', 'error');
+        return false;
+      }
+    }
+
+    async function testFirestoreRead() {
+      log('Testing Firestore read...');
+      try {
+        const snapshot = await db.collection('factories').get();
+        log('✓ Firestore read successful! Found ' + snapshot.size + ' factories', 'success');
+        
+        if (snapshot.size > 0) {
+          snapshot.forEach(doc => {
+            log('  - Factory: ' + (doc.data().name || 'Unnamed') + ' (ID: ' + doc.id + ')');
+          });
+        }
+        return true;
+      } catch (error) {
+        log('✗ Firestore read error: ' + error.message, 'error');
+        return false;
+      }
+    }
+
+    async function testDirectSave() {
+      log('Testing direct factory save without auth...');
+      try {
+        const testFactory = {
+          name: 'Test Factory ' + Date.now(),
+          category: 'Test Category',
+          address: 'Test Address',
+          phone: '1234567890',
+          email: 'test@example.com',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        log('Saving factory data: ' + JSON.stringify(testFactory));
+        const docRef = await db.collection('factories').add(testFactory);
+        log('✓ Factory saved successfully! Doc ID: ' + docRef.id, 'success');
+        
+        // Try to read it back
+        const doc = await docRef.get();
+        if (doc.exists) {
+          log('✓ Verified: Factory data retrieved successfully', 'success');
+        }
+        return true;
+      } catch (error) {
+        log('✗ Direct save error: ' + error.message, 'error');
+        log('Full error details: ' + JSON.stringify(error), 'error');
+        return false;
+      }
+    }
+
+    async function saveSimpleFactory() {
+      const name = document.getElementById('factoryName').value.trim();
+      const category = document.getElementById('factoryCategory').value.trim();
+      
+      if (!name || !category) {
+        log('Please enter factory name and category', 'error');
+        return;
+      }
+      
+      log('Saving factory: ' + name);
+      
+      try {
+        const factoryData = {
+          name: name,
+          category: category,
+          address: 'Not specified',
+          phone: 'Not specified',
+          email: 'Not specified',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        const docRef = await db.collection('factories').add(factoryData);
+        log('✓ Factory "' + name + '" saved! ID: ' + docRef.id, 'success');
+        
+        // Clear form
+        document.getElementById('factoryName').value = '';
+        document.getElementById('factoryCategory').value = '';
+        
+        // Read all factories
+        const snapshot = await db.collection('factories').get();
+        log('Total factories in database: ' + snapshot.size, 'success');
+        
+      } catch (error) {
+        log('✗ Save error: ' + error.message, 'error');
+        
+        // Detailed error analysis
+        if (error.code === 'permission-denied') {
+          log('PERMISSION ISSUE: Firestore rules are blocking writes', 'error');
+          log('Solution: Go to Firebase Console > Firestore > Rules and set:', 'error');
+          log('allow read, write: if true;', 'error');
+        } else if (error.code === 'unavailable') {
+          log('CONNECTION ISSUE: Cannot reach Firebase servers', 'error');
+          log('Check your internet connection', 'error');
+        } else if (error.code === 'not-found') {
+          log('PROJECT ISSUE: Firestore might not be enabled', 'error');
+          log('Go to Firebase Console > Firestore Database > Create Database', 'error');
+        }
+      }
+    }
+
+    // Auto-test on load
+    window.addEventListener('load', async () => {
+      log('=== Starting Auto-Diagnostics ===');
+      
+      // Check if Firebase is loaded
+      if (typeof firebase === 'undefined') {
+        log('✗ Firebase SDK not loaded!', 'error');
+        return;
+      }
+      
+      // Check project config
+      log('Project ID: ' + firebaseConfig.projectId);
+      log('Auth Domain: ' + firebaseConfig.authDomain);
+      
+      // Try to detect common issues
+      setTimeout(async () => {
+        log('=== Testing Firestore Connection ===');
+        const success = await testFirestoreRead();
+        if (!success) {
+          log('=== Attempting Direct Write Test ===');
+          await testDirectSave();
+        }
+      }, 1000);
+    });
+
+    // Listen for auth state
+    if (auth) {
+      auth.onAuthStateChanged((user) => {
+        if (user) {
+          log('Auth state: Logged in as ' + (user.email || user.uid), 'success');
+        } else {
+          log('Auth state: Not logged in');
+        }
+      });
+    }
+  </script>
+</body>
+</html>
