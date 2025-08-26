@@ -189,7 +189,7 @@
         async function checkUserPermissions(user, selectedRole) {
             try {
                 // Fixed admin email (replace with your desired admin email)
-                const FIXED_ADMIN_EMAIL = "admin@sialconnect.com";
+                const FIXED_ADMIN_EMAIL = "youradmin@sialconnect.com";
                 
                 const userDoc = await window.getDoc(window.doc(window.db, 'users', user.uid));
                 
@@ -415,4 +415,5 @@
         });
     </script>
 </body>
+
 </html>
