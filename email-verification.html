@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Email Verification - SialConnect</title>
+  <link rel="stylesheet" href="signin.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+    import { getAuth, onAuthStateChanged, sendEmailVerification, signOut, reload } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCEA_n66W-Dt6eBoPe7QiaSUebEv8ctBaE",
+      authDomain: "sialconnect-5efb5.firebaseapp.com",
+      projectId: "sialconnect-5efb5",
+      storageBucket: "sialconnect-5efb5.firebasestorage.app",
+      messagingSenderId: "660615885537",
+      appId: "1:660615885537:web:27e04abd3396adfcde3da0"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    window.auth = auth;
+    window.onAuthStateChanged = onAuthStateChanged;
+    window.sendEmailVerification = sendEmailVerification;
+    window.signOut = signOut;
+    window.reload = reload;
+  </script>
+
+  <style>
+    .verification-steps {
+      text-align: left;
+      margin: 15px 0;
+    }
+    .verification-steps li {
+      margin: 6px 0;
+      color: #555;
+    }
+    .btn-action {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      background-color: #3498db;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    .btn-action:hover {
+      background-color: #2980b9;
+    }
+    .btn-secondary {
+      background-color: #95a5a6;
+    }
+    .btn-secondary:hover {
+      background-color: #7f8c8d;
+    }
+    .btn-action:disabled {
+      background-color: #bdc3c7;
+      cursor: not-allowed;
+    }
+    .loading {
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #3498db;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      margin-right: 10px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Info Bar -->
+  <div class="top-bar">
+    <div class="left">
+      <a href="mailto:sialconnect@gmail.com"><i class="fas fa-envelope"></i> sialconnect@gmail.com</a>
+      <a href="https://maps.google.com/?q=Sialkot,Punjab,Pakistan" target="_blank"><i class="fas fa-map-marker-alt"></i> Sialkot, Punjab Pakistan</a>
+    </div>
+    <div class="right">
+      <a href="signin.html"><i class="fas fa-user-circle"></i></a>
+    </div>
+  </div>
+
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="logo"><img src="logo.jpg" alt="SialConnect Logo"> SIALCONNECT</div>
+  </nav>
+
+  <!-- Main Verification Box -->
+  <main class="signup-container">
+    <img src="logo.jpg" alt="SialConnect Logo" class="main-logo"/>
+    <h2>Email Verification</h2>
+
+    <div id="message-container"></div>
+
+    <p>Please verify your email address to complete your registration.</p>
+    <div class="email-display" id="userEmail">Loading...</div>
+
+    <div class="verification-steps">
+      <p><strong>Steps to verify:</strong></p>
+      <ol>
+        <li>Check your email inbox (and spam folder).</li>
+        <li>Click the verification link in the email.</li>
+        <li>Return here and click "Check Verification Status".</li>
+        <li>After verification you will be redirected to login.</li>
+      </ol>
+    </div>
+
+    <button class="btn-action" id="checkStatusBtn">
+      <i class="fas fa-sync"></i> Check Verification Status
+    </button>
+    <button class="btn-action" id="resendBtn">
+      <span id="resendText">Resend Verification Email</span>
+    </button>
+    <button class="btn-action btn-secondary" id="changeEmailBtn">
+      Use Different Email
+    </button>
+    <button class="btn-action btn-secondary" id="backToLoginBtn">
+      Back to Login
+    </button>
+  </main>
+
+  <script>
+    let currentUser = null;
+    let resendCooldown = 0;
+
+    function showMessage(message, type = 'error') {
+      const container = document.getElementById('message-container');
+      container.innerHTML = `<div class="${type}-message">${message}</div>`;
+      setTimeout(() => { container.innerHTML = ''; }, 6000);
+    }
+
+    function updateResendButton() {
+      const resendBtn = document.getElementById('resendBtn');
+      const resendText = document.getElementById('resendText');
+      if (resendCooldown > 0) {
+        resendBtn.disabled = true;
+        resendText.innerHTML = `Wait ${resendCooldown}s before resending`;
+        setTimeout(() => { resendCooldown--; updateResendButton(); }, 1000);
+      } else {
+        resendBtn.disabled = false;
+        resendText.innerHTML = 'Resend Verification Email';
+      }
+    }
+
+    async function checkVerificationStatus() {
+      const checkBtn = document.getElementById('checkStatusBtn');
+      const originalText = checkBtn.innerHTML;
+      try {
+        checkBtn.disabled = true;
+        checkBtn.innerHTML = '<span class="loading"></span>Checking...';
+        if (!currentUser) throw new Error('No user found. Please sign up again.');
+        await window.reload(currentUser);
+        if (currentUser.emailVerified) {
+          showMessage('Email verified successfully! Redirecting...', 'success');
+          setTimeout(() => { window.location.href = 'login.html'; }, 2000);
+        } else {
+          showMessage('Email not verified yet. Please check your email.', 'info');
+        }
+      } catch (error) {
+        console.error(error);
+        showMessage('Failed to check verification status. Please try again.', 'error');
+      } finally {
+        checkBtn.disabled = false;
+        checkBtn.innerHTML = originalText;
+      }
+    }
+
+    async function resendVerificationEmail() {
+      const resendBtn = document.getElementById('resendBtn');
+      const resendText = document.getElementById('resendText');
+      try {
+        resendText.innerHTML = '<span class="loading"></span>Sending...';
+        resendBtn.disabled = true;
+        if (!currentUser) throw new Error('No user found. Please sign up again.');
+        await window.sendEmailVerification(currentUser);
+        showMessage('Verification email sent! Please check your inbox.', 'success');
+        resendCooldown = 60;
+        updateResendButton();
+      } catch (error) {
+        console.error(error);
+        showMessage('Failed to send verification email.', 'error');
+        resendBtn.disabled = false;
+        resendText.innerHTML = 'Resend Verification Email';
+      }
+    }
+
+    document.getElementById('checkStatusBtn').addEventListener('click', checkVerificationStatus);
+    document.getElementById('resendBtn').addEventListener('click', resendVerificationEmail);
+
+    document.getElementById('changeEmailBtn').addEventListener('click', () => {
+      if (confirm('Use a different email? You will need to sign up again.')) {
+        window.location.href = 'signin.html';
+      }
+    });
+    document.getElementById('backToLoginBtn').addEventListener('click', () => {
+      window.location.href = 'login.html';
+    });
+
+    window.addEventListener('load', () => {
+      window.onAuthStateChanged(window.auth, (user) => {
+        currentUser = user;
+        if (user) {
+          document.getElementById('userEmail').textContent = user.email;
+          if (user.emailVerified) {
+            showMessage('Your email is already verified! Redirecting...', 'success');
+            setTimeout(() => { window.location.href = 'login.html'; }, 2000);
+          }
+        } else {
+          const pendingEmail = sessionStorage.getItem('pendingVerificationEmail');
+          if (pendingEmail) {
+            document.getElementById('userEmail').textContent = pendingEmail;
+            showMessage('Please sign in first to manage email verification.', 'info');
+          } else {
+            showMessage('No pending verification found. Redirecting to sign up...', 'info');
+            setTimeout(() => { window.location.href = 'signin.html'; }, 3000);
+          }
+        }
+      });
+    });
+  </script>
+</body>
+</html>

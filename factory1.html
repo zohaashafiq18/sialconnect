@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Factory Details</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style> 
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #1a2234;
+      color: white;
+    }
+    .top-bar {
+      background-color: #1A2234;
+      color: white;
+      padding: 5px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+    }
+    .top-bar .left a {
+      margin-right: 20px;
+      color: white;
+      text-decoration: none;
+    }
+    .navbar {
+      display: flex;
+      height: 40px;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 10px;
+      background: linear-gradient(to right, #f2f2f2, #1a2234a2);
+    }
+    .navbar .logo {
+      display: flex;
+      align-items: center;
+      font-weight: bold;
+      font-size: 22px;
+    }
+    .navbar .logo img {
+      height: 45px;
+      margin-right: 10px;
+    }
+    .navbar .nav-links {
+      list-style: none;
+      display: flex;
+      gap: 25px;
+    }
+    .navbar .nav-links a {
+      text-decoration: none;
+      font-weight: bolder;
+      color: #000000;
+    }
+
+    /* Search Box Styles */
+    .search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+      background: white;
+      border-radius: 20px;
+      padding: 8px 15px;
+    }
+    .search-box i {
+      color: #666;
+      margin-right: 8px;
+    }
+    .search-box input {
+      border: none;
+      outline: none;
+      width: 200px;
+      background: transparent;
+    }
+
+    /* Search Dropdown Styles */
+    .search-container {
+      position: relative;
+    }
+    .search-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      max-height: 300px;
+      overflow-y: auto;
+      z-index: 1000;
+      display: none;
+    }
+    .search-result {
+      padding: 12px 16px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      transition: background 0.2s;
+      color: #333;
+    }
+    .search-result:hover {
+      background: #f8f9fa;
+    }
+    .search-result:last-child {
+      border-bottom: none;
+    }
+    .factory-name {
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 4px;
+    }
+    .factory-address {
+      font-size: 12px;
+      color: #666;
+    }
+    .no-results {
+      padding: 16px;
+      text-align: center;
+      color: #999;
+      font-style: italic;
+    }
+    .loading {
+      padding: 16px;
+      text-align: center;
+      color: #666;
+    }
+
+    .factory-info {
+      background-color: #bcb7b766;
+      padding: 30px;
+      line-height: 1.8;
+      text-align: center;
+    }
+    .factory-info a {
+      color: #58a6ff;
+      text-decoration: none;
+    }
+    .product-section {
+      padding: 20px;
+    }
+    .product-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .product-card {
+      background-color: #fff;
+      color: #000;
+      width: 120px;
+      text-align: center;
+      border-radius: 5px;
+      overflow: hidden;
+      box-shadow: 0 0 5px rgba(0,0,0,0.2);
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+    }
+    .product-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .product-card img {
+      width: 100%;
+      height: 100px;
+      object-fit: cover;
+    }
+    .product-card p {
+      margin: 5px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .rating {
+      font-weight: bold;
+      color: #ff9800;
+      margin: 5px 0;
+    }
+    .review-count {
+      color: #666;
+      font-size: 10px;
+      margin-bottom: 5px;
+    }
+    
+    /* Top product badge */
+    .top-badge {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: #ff9800;
+      color: white;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-weight: bold;
+    }
+
+    /* Back button */
+    .back-button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 20px;
+      font-size: 14px;
+    }
+    .back-button:hover {
+      background: #0056b3;
+    }
+
+    /* User icon styling */
+    .user-icon {
+      color: white;
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .user-icon:hover { opacity: 0.8; transform: scale(1.1); }
+
+    /* Product details tooltip */
+    .product-tooltip {
+      position: absolute;
+      background: #333;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-bottom: 5px;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s;
+      z-index: 100;
+    }
+    .product-card:hover .product-tooltip {
+      opacity: 1;
+      visibility: visible;
+    }
+    .product-tooltip::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: #333;
+    }
+
+    /* Loading animation */
+    .products-loading {
+      text-align: center;
+      padding: 20px;
+      color: #bdc3c7;
+    }
+    .products-loading i {
+      font-size: 24px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Info Bar -->
+  <div class="top-bar">
+    <div class="left">
+      <a href="mailto:sialconnect@gmail.com"><i class="fas fa-envelope"></i> sialconnect@gmail.com</a>
+      <a href="https://maps.google.com/?q=Sialkot,Punjab,Pakistan" target="_blank"><i class="fas fa-map-marker-alt"></i> Sialkot, Punjab Pakistan</a>
+    </div>
+    <div class="right">
+     <a href="profile.html"><i class="fas fa-user-circle user-icon"></i></a>
+    </div>
+  </div>
+
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="logo"> <img src="logo.jpg" alt="SialConnect Logo"> SIALCONNECT </div>
+    <ul class="nav-links">
+       <li><a href="sialconnt.html">HOME</a></li>
+      <li><a href="factories.html">FACTORY</a></li>
+      <li><a href="categories.html">CATEGORY</a></li>
+      <li><a href="aboutme.html">ABOUT US</a></li>
+    </ul>
+    <!-- Search Box -->
+    <div class="search-box search-container">
+      <i class="fas fa-search"></i>
+      <input type="text" id="searchInput" placeholder="Search factories..." autocomplete="off">
+      <div id="searchDropdown" class="search-dropdown"></div>
+    </div>
+  </nav>
+
+  <!-- Back Button -->
+  <button class="back-button" onclick="goBack()">
+    <i class="fas fa-arrow-left"></i> Back to Factories
+  </button>
+
+  <!-- Factory Information -->
+  <section class="factory-info" id="factoryInfo">
+    <h2>Loading factory details...</h2>
+  </section>
+
+  <!-- Top Products -->
+  <section class="product-section">
+    <h3>TOP PRODUCTS</h3>
+    <div class="product-row" id="topProducts">
+      <div class="products-loading">
+        <i class="fas fa-spinner"></i>
+        <p>Loading top products...</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- All Products -->
+  <section class="product-section">
+    <h3>ALL PRODUCTS</h3>
+    <div class="product-row" id="allProducts">
+      <div class="products-loading">
+        <i class="fas fa-spinner"></i>
+        <p>Loading products...</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCEA_n66W-Dt6eBoPe7QiaSUebEv8ctBaE",
+      authDomain: "sialconnect-5efb5.firebaseapp.com",
+      projectId: "sialconnect-5efb5",
+      storageBucket: "sialconnect-5efb5.firebasestorage.app",
+      messagingSenderId: "660615885537",
+      appId: "1:660615885537:web:27e04abd3396adfcde3da0"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let allFactories = []; // Cache for search
+    let searchTimeout = null;
+    let currentFactoryData = null; // Store current factory data
+
+    // Get factoryId from URL or sessionStorage
+    const urlParams = new URLSearchParams(window.location.search);
+    const factoryId = urlParams.get("id");
+
+    // Setup search functionality
+    function setupSearchFunctionality() {
+      const searchInput = document.getElementById('searchInput');
+      const searchDropdown = document.getElementById('searchDropdown');
+
+      // Load all factories for search
+      loadAllFactories();
+
+      // Search input event listener
+      searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        
+        if (searchTimeout) {
+          clearTimeout(searchTimeout);
+        }
+
+        if (query.length >= 2) {
+          searchDropdown.style.display = 'block';
+          searchDropdown.innerHTML = '<div class="loading">Searching...</div>';
+          
+          searchTimeout = setTimeout(() => {
+            performSearch(query);
+          }, 300);
+        } else {
+          searchDropdown.style.display = 'none';
+        }
+      });
+
+      // Hide dropdown when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.search-container')) {
+          searchDropdown.style.display = 'none';
+        }
+      });
+
+      // Handle Enter key
+      searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          const query = e.target.value.trim();
+          if (query.length >= 2) {
+            performSearch(query, true);
+          }
+        }
+      });
+    }
+
+    // Load all factories for search
+    async function loadAllFactories() {
+      try {
+        const snapshot = await db.collection('factories').get();
+        allFactories = [];
+        snapshot.forEach((doc) => {
+          const factoryData = doc.data();
+          allFactories.push({
+            id: doc.id,
+            name: factoryData.name || '',
+            address: factoryData.address || '',
+            description: factoryData.description || '',
+            category: factoryData.category || '',
+            ...factoryData
+          });
+        });
+      } catch (error) {
+        console.error('Error loading factories for search:', error);
+      }
+    }
+
+    // Perform search
+    function performSearch(query, forceRedirect = false) {
+      const searchDropdown = document.getElementById('searchDropdown');
+      
+      if (allFactories.length === 0) {
+        searchDropdown.innerHTML = '<div class="no-results">Loading factories...</div>';
+        return;
+      }
+
+      const lowerQuery = query.toLowerCase();
+      const results = allFactories.filter(factory => {
+        return (
+          (factory.name && factory.name.toLowerCase().includes(lowerQuery)) ||
+          (factory.address && factory.address.toLowerCase().includes(lowerQuery)) ||
+          (factory.category && factory.category.toLowerCase().includes(lowerQuery)) ||
+          (factory.description && factory.description.toLowerCase().includes(lowerQuery))
+        );
+      });
+
+      if (results.length === 0) {
+        searchDropdown.innerHTML = '<div class="no-results">No factories found</div>';
+      } else {
+        if (forceRedirect && results.length === 1) {
+          redirectToFactory(results[0]);
+          return;
+        }
+
+        let html = '';
+        results.slice(0, 8).forEach(factory => {
+          html += `
+            <div class="search-result" onclick="redirectToFactory('${factory.id}')">
+              <div class="factory-name">${factory.name || 'Unnamed Factory'}</div>
+              <div class="factory-address">${factory.address || 'Address not available'}</div>
+            </div>
+          `;
+        });
+
+        if (results.length > 8) {
+          html += `<div class="no-results">+${results.length - 8} more results...</div>`;
+        }
+
+        searchDropdown.innerHTML = html;
+      }
+    }
+
+    // Redirect to factory
+    function redirectToFactory(factoryIdOrObject) {
+      const searchDropdown = document.getElementById('searchDropdown');
+      searchDropdown.style.display = 'none';
+      document.getElementById('searchInput').value = '';
+
+      let targetId;
+      if (typeof factoryIdOrObject === 'object') {
+        targetId = factoryIdOrObject.id;
+        sessionStorage.setItem('selectedFactory', JSON.stringify(factoryIdOrObject));
+      } else {
+        targetId = factoryIdOrObject;
+      }
+
+      // If it's the same factory, just reload
+      if (targetId === factoryId) {
+        location.reload();
+      } else {
+        window.location.href = `factory1.html?id=${targetId}`;
+      }
+    }
+
+    // Product click handler - redirect to product details
+    function openProductDetails(product) {
+      console.log('Opening product details:', product);
+      
+      // Create URL parameters for product1.html
+      // Use the already structured data from subcategories
+      const params = new URLSearchParams({
+        category: product.category, // category document ID
+        product: product.mainProduct, // main product name
+        subproduct: product.subProduct || product.name // subcategory name
+      });
+      
+      console.log('Redirecting with params:', params.toString());
+      
+      // Redirect to product details page
+      window.location.href = `product1.html?${params.toString()}`;
+    }
+
+    // Function to get actual rating from reviews
+    async function getProductRating(product) {
+      try {
+        // Create product path matching product1.html format
+        // Using the category ID and product names from subcategory structure
+        const productPath = `${product.category}_${product.mainProduct}_${product.subProduct || product.name}`;
+        
+        console.log('Getting rating for product path:', productPath);
+        
+        // Query reviews for this product
+        const reviewsSnapshot = await db.collection('reviews')
+          .where('productPath', '==', productPath)
+          .get();
+        
+        if (reviewsSnapshot.empty) {
+          console.log('No reviews found for:', productPath);
+          return { rating: 0, count: 0 };
+        }
+        
+        // Calculate average rating
+        let totalRating = 0;
+        let reviewCount = 0;
+        
+        reviewsSnapshot.forEach(doc => {
+          const review = doc.data();
+          if (review.rating) {
+            totalRating += parseInt(review.rating);
+            reviewCount++;
+          }
+        });
+        
+        if (reviewCount === 0) {
+          return { rating: 0, count: 0 };
+        }
+        
+        const averageRating = totalRating / reviewCount;
+        console.log(`Product ${product.name}: ${reviewCount} reviews, avg rating: ${averageRating}`);
+        
+        return { 
+          rating: parseFloat(averageRating.toFixed(1)), 
+          count: reviewCount 
+        };
+        
+      } catch (error) {
+        console.error('Error getting product rating:', error);
+        return { rating: 0, count: 0 };
+      }
+    }
+
+    // Create product card HTML with real ratings
+    function createProductCard(product, isTopProduct = false) {
+      const rating = product.rating || 0;
+      const reviewCount = product.reviewCount || 0;
+      const displayRating = rating > 0 ? rating.toFixed(1) : 'New';
+      
+      // Get product image - check multiple possible field names
+      const productImage = product.image || product.imageUrl || product.img || product.productImage || 'https://via.placeholder.com/120';
+      
+      return `
+        <div class="product-card" onclick='openProductDetails(${JSON.stringify(product).replace(/'/g, "&apos;")})'>
+          ${isTopProduct ? '<div class="top-badge">TOP</div>' : ''}
+          <div class="product-tooltip">Click to view details</div>
+          <img src="${productImage}" 
+               alt="${product.name || product.productName || 'Product'}"
+               onerror="this.src='https://via.placeholder.com/120'">
+          <p>${product.name || product.productName || "Unnamed"}</p>
+          <div class="rating">${displayRating} ⭐</div>
+          ${reviewCount > 0 ? `<div class="review-count">(${reviewCount} reviews)</div>` : '<div class="review-count">No reviews yet</div>'}
+        </div>
+      `;
+    }
+
+    // Load Factory Details
+    async function loadFactoryDetails() {
+      if (!factoryId) {
+        // Try to get from sessionStorage
+        const storedFactory = sessionStorage.getItem('selectedFactory');
+        if (storedFactory) {
+          try {
+            const factory = JSON.parse(storedFactory);
+            currentFactoryData = factory;
+            displayFactoryInfo(factory);
+            loadProducts(factory.id || factoryId);
+            return;
+          } catch (error) {
+            console.error('Error parsing stored factory:', error);
+          }
+        }
+        
+        document.getElementById("factoryInfo").innerHTML = "<p>No factory selected</p>";
+        return;
+      }
+
+      try {
+        const doc = await db.collection("factories").doc(factoryId).get();
+        if (!doc.exists) {
+          document.getElementById("factoryInfo").innerHTML = "<p>Factory not found</p>";
+          return;
+        }
+
+        const factory = doc.data();
+        currentFactoryData = { ...factory, id: factoryId };
+        displayFactoryInfo(factory);
+        loadProducts(factoryId);
+
+      } catch (error) {
+        document.getElementById("factoryInfo").innerHTML = `<p>Error: ${error.message}</p>`;
+      }
+    }
+
+    // Display factory information
+    function displayFactoryInfo(factory) {
+      // Get factory logo if available
+      const factoryLogo = factory.logo || factory.logoUrl || factory.imageUrl || '';
+      
+      document.getElementById("factoryInfo").innerHTML = `
+        ${factoryLogo ? `<img src="${factoryLogo}" style="max-width: 150px; max-height: 100px; margin-bottom: 20px;" onerror="this.style.display='none'">` : ''}
+        <h2>${factory.name || "Factory Details"}</h2>
+        <p><strong>Category:</strong> ${factory.category || "N/A"}</p>
+        <p><strong>Address:</strong> ${factory.address || "N/A"}</p>
+        <p><strong>Phone:</strong> ${factory.phone || "N/A"} &nbsp; 
+           <strong>Mobile:</strong> ${factory.mobile || "N/A"}</p>
+        <p><strong>Email:</strong> ${factory.email || "N/A"}</p>
+        <p><strong>Website:</strong> 
+          <a href="${factory.website || "#"}" target="_blank">${factory.website || "N/A"}</a>
+        </p>
+        ${factory.description ? `<p><strong>Description:</strong> ${factory.description}</p>` : ''}
+      `;
+    }
+
+    // FIXED: Load Products from categories->items->subcategories with factory filter
+    async function loadProducts(factoryId) {
+      const topProductsContainer = document.getElementById("topProducts");
+      const allProductsContainer = document.getElementById("allProducts");
+
+      try {
+        console.log('Loading products (subcategories) for factory:', factoryId);
+        
+        // Get all categories
+        const categoriesSnapshot = await db.collection("categories").get();
+        
+        let allProducts = [];
+        
+        // Go through each category
+        categoriesSnapshot.forEach(categoryDoc => {
+          const categoryData = categoryDoc.data();
+          const categoryId = categoryDoc.id;
+          
+          // Check if category has items
+          if (categoryData.items && Array.isArray(categoryData.items)) {
+            // Go through each item (main product)
+            categoryData.items.forEach(item => {
+              // Check if item has subcategories
+              if (item.sub && Array.isArray(item.sub)) {
+                // Go through each subcategory
+                item.sub.forEach(subCategory => {
+                  // Check if this subcategory belongs to current factory
+                  // Check multiple possible field names
+                  const belongsToFactory = 
+                    subCategory.factory === factoryId || 
+                    subCategory.factoryId === factoryId ||
+                    subCategory.factoryID === factoryId ||
+                    subCategory.factory_id === factoryId;
+                  
+                  if (belongsToFactory) {
+                    console.log('Found product for factory:', subCategory.name);
+                    
+                    // Create product object with all necessary data
+                    allProducts.push({
+                      ...subCategory,
+                      id: `${categoryId}_${item.name}_${subCategory.name}`,
+                      category: categoryId,
+                      categoryName: categoryData.name,
+                      mainProduct: item.name,
+                      subProduct: subCategory.name,
+                      name: subCategory.name,
+                      image: subCategory.img || subCategory.image || subCategory.imageUrl,
+                      factoryName: currentFactoryData?.name || 'Unknown Factory',
+                      factoryId: factoryId
+                    });
+                  }
+                });
+              }
+            });
+          }
+        });
+
+        console.log(`Found ${allProducts.length} products for factory ${factoryId}`);
+
+        if (allProducts.length === 0) {
+          topProductsContainer.innerHTML = "<p>No products found for this factory</p>";
+          allProductsContainer.innerHTML = "<p>No products found for this factory</p>";
+          return;
+        }
+
+        // Get ratings for all products
+        const productsWithRatings = [];
+        
+        for (const product of allProducts) {
+          // Get actual rating from reviews
+          const ratingData = await getProductRating(product);
+          product.rating = ratingData.rating;
+          product.reviewCount = ratingData.count;
+          
+          productsWithRatings.push(product);
+        }
+
+        // Sort by rating for top products
+        productsWithRatings.sort((a, b) => b.rating - a.rating);
+
+        // Clear containers
+        topProductsContainer.innerHTML = "";
+        allProductsContainer.innerHTML = "";
+
+        let hasTopProducts = false;
+
+        // Display products
+        productsWithRatings.forEach(product => {
+          // All products section
+          allProductsContainer.innerHTML += createProductCard(product);
+          
+          // Top products (rating 4.0 or higher with at least 1 review)
+          if (product.rating >= 4.0 && product.reviewCount > 0) {
+            topProductsContainer.innerHTML += createProductCard(product, true);
+            hasTopProducts = true;
+          }
+        });
+
+        // Handle empty top products
+        if (!hasTopProducts) {
+          topProductsContainer.innerHTML = "<p>No top-rated products yet (4.0+ rating required)</p>";
+        }
+
+      } catch (error) {
+        console.error('Error loading products:', error);
+        topProductsContainer.innerHTML = `<p>Error loading products: ${error.message}</p>`;
+        allProductsContainer.innerHTML = `<p>Please check console for details</p>`;
+      }
+    }
+
+    // Back button functionality
+    function goBack() {
+      window.history.back();
+    }
+
+    // Initialize page
+    window.addEventListener("DOMContentLoaded", () => {
+      setupSearchFunctionality();
+      loadFactoryDetails();
+    });
+
+    // Real-time listener for category changes (products are in categories)
+    function setupProductListener() {
+      if (!factoryId) return;
+      
+      // Listen to categories collection for updates
+      db.collection('categories').onSnapshot((snapshot) => {
+        console.log('Categories updated, checking for product changes...');
+        // Reload products when categories change
+        loadProducts(factoryId);
+      }, (error) => {
+        console.error('Error in category listener:', error);
+      });
+    }
+
+    // Call after factory is loaded
+    setTimeout(() => setupProductListener(), 2000);
+  </script>
+</body>
+</html>

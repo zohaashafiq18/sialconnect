@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SialConnect - Factories</title>
+  
+  <!-- Keep your existing CSS -->
+  <link rel="stylesheet" href="factories.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <!-- Add Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  
+  <!-- Add inline CSS for search dropdown and other styles -->
+  <style>
+    /* Search Box Styles - Same as Home Page */
+    .search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 8px 15px;
+    }
+    .search-box i {
+      color: #040000;
+      margin-right: 8px;
+    }
+    .search-box input {
+      border: none;
+      outline: none;
+      width: 200px;
+      background: transparent;
+    }
+    
+    
+
+    /* Loading spinner */
+    .loading {
+      padding: 16px;
+      text-align: center;
+      color: #666;
+    }
+    
+    .loading-spinner {
+      text-align: center;
+      padding: 50px;
+      color: #666;
+    }
+    .loading-spinner i {
+      font-size: 48px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .no-data {
+      text-align: center;
+      padding: 50px;
+      color: #999;
+      font-size: 18px;
+    }
+    
+    /* Factory card styles */
+    .factory-card {
+      cursor: pointer;
+      transition: transform 0.2s;
+      display: flex;
+      align-items: center;
+      padding: 15px;
+      background: white;
+      margin: 10px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .factory-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .factory-card img {
+      width: 190px;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 10px;
+      
+    }
+    
+    .factory-card .info {
+      flex-grow: 1;
+    }
+    
+    .factory-card .arrow {
+      font-size: 24px;
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+  <!-- Top Info Bar -->
+  <div class="top-bar">
+    <div class="left">
+      <a href="mailto:sialconnect@gmail.com"><i class="fas fa-envelope"></i> sialconnect@gmail.com</a>
+      <a href="https://maps.google.com/?q=Sialkot,Punjab,Pakistan" target="_blank"><i class="fas fa-map-marker-alt"></i> Sialkot, Punjab Pakistan</a>
+    </div>
+    <div class="right">
+      <a href="profile.html"><i class="fas fa-user-circle"></i></a>
+    </div>
+  </div>
+
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="logo"> 
+      <img src="logo.jpg" alt="SialConnect Logo"> 
+      SIALCONNECT 
+    </div>
+    <ul class="nav-links">
+      <li><a href="sialconnt.html">HOME</a></li>
+      <li><a href="factories.html">FACTORY</a></li>
+      <li><a href="categories.html">CATEGORY</a></li>
+      <li><a href="aboutme.html">ABOUT US</a></li>
+    </ul>
+    <div class="search-box search-container">
+      <i class="fas fa-search"></i>
+      <input type="text" id="searchInput" placeholder="Search factories by name or address..." autocomplete="off">
+      
+    </div>
+  </nav>
+
+  <div class="hero">
+    <h1>WELCOME to <br> Industrial state of Sialkot</h1>
+  </div>
+
+  <!-- Dynamic Factory List -->
+  <main class="factory-list" id="factoryList">
+    <!-- Loading state -->
+    <div class="loading-spinner" id="loadingState">
+      <i class="fas fa-spinner"></i>
+      <p>Loading factories...</p>
+    </div>
+  </main>
+
+  <script>
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyCEA_n66W-Dt6eBoPe7QiaSUebEv8ctBaE",
+      authDomain: "sialconnect-5efb5.firebaseapp.com",
+      projectId: "sialconnect-5efb5",
+      storageBucket: "sialconnect-5efb5.firebasestorage.app",
+      messagingSenderId: "660615885537",
+      appId: "1:660615885537:web:27e04abd3396adfcde3da0"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Global variables
+    let allFactories = [];
+    let searchTimeout = null;
+
+    // Function to load factories from Firebase
+    async function loadFactories() {
+      const factoryList = document.getElementById('factoryList');
+      
+      try {
+        console.log('Fetching factories from Firebase...');
+        const snapshot = await db.collection('factories').get();
+        
+        console.log(`Found ${snapshot.size} factories`);
+        
+        // Clear loading state
+        factoryList.innerHTML = '';
+        allFactories = []; // Reset the array
+        
+        if (snapshot.empty) {
+          factoryList.innerHTML = `
+            <div class="no-data">
+              <i class="fas fa-industry" style="font-size: 48px; color: #ddd;"></i>
+              <p>No factories found</p>
+              <p style="font-size: 14px; color: #aaa;">Add factories from the admin panel</p>
+            </div>
+          `;
+          return;
+        }
+        
+        // Add each factory
+        snapshot.forEach(doc => {
+          const factory = doc.data();
+          console.log('Factory data:', factory); // Debug log to check field names
+          
+          // Store factory data for search
+          allFactories.push({
+            id: doc.id,
+            name: factory.name || '',
+            address: factory.address || '',
+            category: factory.category || '',
+            description: factory.description || '',
+            logo: factory.logo || factory.logoUrl || factory.imageUrl || '', // Check multiple possible field names
+            ...factory
+          });
+          
+          const factoryCard = createFactoryCard(factory, doc.id);
+          factoryList.appendChild(factoryCard);
+        });
+        
+      } catch (error) {
+        console.error('Error loading factories:', error);
+        factoryList.innerHTML = `
+          <div class="no-data">
+            <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #f44336;"></i>
+            <p>Error loading factories</p>
+            <p style="font-size: 14px; color: #aaa;">${error.message}</p>
+            <button onclick="loadFactories()" style="margin-top: 10px; padding: 10px 20px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer;">
+              Retry
+            </button>
+          </div>
+        `;
+      }
+    }
+
+    // Function to create factory card element
+    function createFactoryCard(factory, id) {
+      const card = document.createElement('div');
+      card.className = 'factory-card';
+      card.onclick = () => openFactory(id);
+      
+      // Try multiple possible field names for logo
+      const logoUrl = factory.logo || factory.logoUrl || factory.imageUrl || factory.image || '';
+      
+      // Use placeholder if no logo found
+      let finalLogoUrl = logoUrl;
+      if (!logoUrl) {
+        // Create a nice placeholder with factory initial
+        const initial = factory.name ? factory.name.charAt(0).toUpperCase() : 'F';
+        finalLogoUrl = `https://ui-avatars.com/api/?name=${initial}&background=0070A7&color=fff&size=100`;
+      }
+      
+      console.log(`Factory: ${factory.name}, Logo URL: ${finalLogoUrl}`); // Debug log
+      
+      card.innerHTML = `
+        <img src="${finalLogoUrl}" 
+             alt="${factory.name || 'Factory'}" 
+             onerror="this.src='https://ui-avatars.com/api/?name=${factory.name ? factory.name.charAt(0) : 'F'}&background=cccccc&color=fff&size=100'">
+        <div class="info">
+          <h2>${factory.name || 'Unnamed Factory'}</h2>
+          <p style="color: #2196F3; font-weight: 500;">${factory.category || 'No category specified'}</p>
+          <p style="font-size: 12px; color: #666; margin-top: 5px;">
+            <i class="fas fa-map-marker-alt"></i> ${factory.address || 'No address'}
+          </p>
+        </div>
+        <div class="arrow">»</div>
+      `;
+      
+      return card;
+    }
+
+    // Function to open factory detail page
+    function openFactory(factoryId) {
+      // Store factory data and redirect
+      const factory = allFactories.find(f => f.id === factoryId);
+      if (factory) {
+        sessionStorage.setItem('selectedFactory', JSON.stringify(factory));
+      }
+      window.location.href = `factory1.html?id=${factoryId}`;
+    }
+
+    // Enhanced Search Functionality with Dropdown (Same as Home Page)
+    function setupSearchFunctionality() {
+      const searchInput = document.getElementById('searchInput');
+      const searchDropdown = document.getElementById('searchDropdown');
+
+      // Search input event listener
+      searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        
+        if (searchTimeout) {
+          clearTimeout(searchTimeout);
+        }
+
+        if (query.length >= 2) {
+          searchDropdown.style.display = 'block';
+          searchDropdown.innerHTML = '<div class="loading">Searching...</div>';
+          
+          searchTimeout = setTimeout(() => {
+            performSearch(query);
+          }, 300);
+        } else if (query.length === 0) {
+          searchDropdown.style.display = 'none';
+          // Show all factories when search is cleared
+          showAllFactories();
+        }
+      });
+
+      // Keep dropdown open when focused
+      searchInput.addEventListener('focus', (e) => {
+        const query = e.target.value.trim();
+        if (query.length >= 2) {
+          performSearch(query);
+          searchDropdown.style.display = 'block';
+        }
+      });
+
+      // Hide dropdown when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.search-container')) {
+          searchDropdown.style.display = 'none';
+        }
+      });
+
+      // Handle Enter key
+      searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          const query = e.target.value.trim();
+          if (query.length >= 2) {
+            performSearch(query, true);
+          }
+        }
+      });
+    }
+
+    // Perform search function
+    function performSearch(query, forceRedirect = false) {
+      const searchDropdown = document.getElementById('searchDropdown');
+      
+      if (allFactories.length === 0) {
+        searchDropdown.innerHTML = '<div class="no-results">Loading factories...</div>';
+        return;
+      }
+
+      const lowerQuery = query.toLowerCase();
+      const results = allFactories.filter(factory => {
+        return (
+          (factory.name && factory.name.toLowerCase().includes(lowerQuery)) ||
+          (factory.address && factory.address.toLowerCase().includes(lowerQuery)) ||
+          (factory.category && factory.category.toLowerCase().includes(lowerQuery)) ||
+          (factory.description && factory.description.toLowerCase().includes(lowerQuery))
+        );
+      });
+
+      // Also filter the visible cards
+      const cards = document.querySelectorAll('.factory-card');
+      cards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(lowerQuery) ? '' : 'none';
+      });
+
+      if (results.length === 0) {
+        searchDropdown.innerHTML = '<div class="no-results">No factories found</div>';
+      } else {
+        if (forceRedirect && results.length === 1) {
+          openFactory(results[0].id);
+          return;
+        }
+
+        let html = '';
+        results.slice(0, 8).forEach((factory) => {
+          html += `
+            <div class="search-result" onclick="selectFactory('${factory.id}')">
+              <div class="factory-name">${factory.name || 'Unnamed Factory'}</div>
+              <div class="factory-address">${factory.address || 'Address not available'}</div>
+              <div class="factory-category">${factory.category || 'No category'}</div>
+            </div>
+          `;
+        });
+
+        if (results.length > 2) {
+          html += `<div class="no-results">+${results.length - 8} more results...</div>`;
+        }
+
+        searchDropdown.innerHTML = html;
+      }
+    }
+
+    // Select factory from dropdown
+    function selectFactory(factoryId) {
+      const searchDropdown = document.getElementById('searchDropdown');
+      const searchInput = document.getElementById('searchInput');
+      
+      // Hide dropdown and clear search
+      searchDropdown.style.display = 'none';
+      searchInput.value = '';
+      
+      // Navigate to factory
+      openFactory(factoryId);
+    }
+
+    // Show all factories
+    function showAllFactories() {
+      const cards = document.querySelectorAll('.factory-card');
+      cards.forEach(card => {
+        card.style.display = '';
+      });
+    }
+
+    // Load factories when page loads
+    window.addEventListener('DOMContentLoaded', async () => {
+      console.log('Page loaded, fetching factories...');
+      await loadFactories();
+      setupSearchFunctionality();
+    });
+
+    // Real-time updates (optional)
+    db.collection('factories').onSnapshot((snapshot) => {
+      console.log('Factories updated in real-time');
+      loadFactories();
+    });
+  </script>
+</body>
+</html>

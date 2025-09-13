@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SialConnect</title>
+  <link rel="stylesheet" href="sktconnect.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+    import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+    import { getFirestore, collection, onSnapshot, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyCEA_n66W-Dt6eBoPe7QiaSUebEv8ctBaE",
+      authDomain: "sialconnect-5efb5.firebaseapp.com",
+      projectId: "sialconnect-5efb5",
+      storageBucket: "sialconnect-5efb5.firebasestorage.app",
+      messagingSenderId: "660615885537",
+      appId: "1:660615885537:web:27e04abd3396adfcde3da0"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const firestoreDb = getFirestore(app);
+
+    // Make Firebase available globally
+    window.auth = auth;
+    window.db = firestoreDb;
+    window.signOut = signOut;
+    window.getDocs = getDocs;
+    window.collection = collection;
+    window.onSnapshot = onSnapshot;
+  </script>
+
+  <style>
+    /* Simple user icon styling */
+    .user-icon {
+      color: white;
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .user-icon:hover { opacity: 0.8; transform: scale(1.1); }
+    .user-info { display: flex; align-items: center; gap: 10px; color: white; cursor: pointer; transition: all 0.3s; }
+    .user-info:hover { opacity: 0.8; }
+
+    /* Search Box Styles */
+    .search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 8px 15px;
+    }
+    .search-box i {
+      color: #040000;
+      margin-right: 8px;
+    }
+    .search-box input {
+      border: none;
+      outline: none;
+      width: 200px;
+      background: transparent;
+    }
+    /* Search Dropdown Styles */
+    .search-container {
+      position: relative;
+    }
+
+    .search-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      max-height: 300px;
+      overflow-y: auto;
+      z-index: 1000;
+      display: none;
+    }
+
+    .search-result {
+      padding: 12px 16px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      transition: background 0.2s;
+      color: #333;
+    }
+
+    .search-result:hover {
+      background: #f8f9fa;
+    }
+
+    .search-result:last-child {
+      border-bottom: none;
+    }
+
+    .factory-name {
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 4px;
+    }
+
+    .factory-address {
+      font-size: 12px;
+      color: #666;
+    }
+
+    .no-results {
+      padding: 16px;
+      text-align: center;
+      color: #999;
+      font-style: italic;
+    }
+
+    /* Loading spinner */
+    .loading {
+      padding: 16px;
+      text-align: center;
+      color: #666;
+    }
+
+    /* Search input styling */
+    .search-box input {
+      width: 100%;
+      padding-right: 40px;
+    }
+
+    /* Category click styling */
+    .category {
+      cursor: pointer;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .category:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+    }
+    
+    .category:active {
+      transform: translateY(-2px);
+    }
+
+    /* Info boxes animation */
+    .info-box strong {
+      display: inline-block;
+      min-width: 30px;
+      transition: all 0.3s ease;
+      background-color: #040000;
+    }
+
+    /* Chatbot Styles */
+    #chatbotWidget {
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      width: 550px;
+      height: 500px;
+      border: 2px solid #ccc;
+      border-radius: 10px;
+      display: none;
+      z-index: 9999;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      overflow: hidden;
+      background: white;
+    }
+    #chatbotButton {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 14px 20px;
+      border-radius: 50px;
+      cursor: pointer;
+      font-size: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      transition: background 0.3s;
+      z-index: 10000;
+    }
+    #chatbotButton:hover { background: #0056b3; }
+  </style>
+</head>
+<body>
+  <!-- Top Info Bar -->
+  <div class="top-bar">
+    <div class="left">
+      <a href="mailto:sialconnect@gmail.com"><i class="fas fa-envelope"></i> sialconnect@gmail.com</a>
+      <a href="https://maps.google.com/?q=Sialkot,Punjab,Pakistan" target="_blank"><i class="fas fa-map-marker-alt"></i> Sialkot, Punjab Pakistan</a>
+    </div>
+    <div class="right" id="topBarRight">
+      <a href="profile.html"><i class="fas fa-user-circle"></i></a>
+    </div>
+  </div>
+
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="logo"> <img src="logo.jpg" alt="SialConnect Logo"> SIALCONNECT </div>
+    <ul class="nav-links">
+      <li><a href="sialconnt.html">HOME</a></li>
+      <li><a href="factories.html">FACTORY</a></li>
+      <li><a href="categories.html">CATEGORY</a></li>
+      <li><a href="aboutme.html">ABOUT US</a></li>
+    </ul>
+    <div class="search-box search-container">
+      <i class="fas fa-search"></i>
+      <input type="text" id="searchInput" placeholder="Search factories by name or address..." autocomplete="off">
+      <div id="searchDropdown" class="search-dropdown"></div>
+    </div>
+  </nav>
+    
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-text">
+      <h1>Discover Sialkot's Industrial Excellence</h1>
+      <p>Explore the manufacturing hub of Pakistan, known for its quality products and expert craftsmanship.</p>
+      <a href="factories.html"><button>Explore Factories</button></a>
+    </div>
+  </section>
+
+  <!-- Top Categories -->
+  <section class="categories">
+    <h2>TOP CATEGORIES</h2>
+    <div class="category-row">
+      <div class="category" onclick="navigateToCategory('leather')" title="Click to explore Leather products">
+        <img src="leather.webp" alt="Leather">
+        <h3>Leather</h3>
+        <p>Explore premium leather goods crafted with tradition and durability. From fashion to utility, quality meets style here.</p>
+      </div>
+      <div class="category" onclick="navigateToCategory('sports')" title="Click to explore Sports products">
+        <img src="sport.jpg" alt="Sport Goods">
+        <h3>Sport Goods</h3>
+        <p>Discover high-quality sports equipment for all skill levels. Built for performance and durability.</p>
+      </div>
+      <div class="category" onclick="navigateToCategory('cutlery')" title="Click to explore Cutlery products">
+        <img src="cutlery.jpeg" alt="Cutlery">
+        <h3>Cutlery</h3>
+        <p>Sharp, precise, and built to last - browse our finest cutlery collections. Perfect for kitchens and professionals alike.</p>
+      </div>
+      <div class="category" onclick="navigateToCategory('textile')" title="Click to explore Textile products">
+        <img src="textile.jpeg" alt="Textile goods">
+        <h3>Textile goods</h3>
+        <p>Soft, strong, and stylish - find top-quality fabrics and garments. Designed to meet diverse industry needs.</p>
+      </div>
+      <div class="category" onclick="navigateToCategory('music')" title="Click to explore Musical Instruments">
+        <img src="musical.webp" alt="music">
+        <h3>Music Instruments</h3>
+        <p>Discover finely tuned musical instruments for all skill levels. Crafted for rich sound and lasting performance.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Real-time Stats Section -->
+  <div class="info-boxes">
+    <div class="info-box"><img src="factories.jpeg" alt="Factories"><strong id="factoriesCount">0</strong> +<br>Factories</div>
+    <div class="info-box"><img src="factories.jpeg" alt="Categories"><strong id="categoriesCount">0</strong>+ <br>Categories</div>
+    <div class="info-box"><img src="factories.jpeg" alt="Products"><strong id="productsCount">0</strong>+ <br> Products</div>
+  </div><br><br>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-top">
+      <div class="footer-logo"><img src="logo.jpg" alt="Sial Connect Logo" /></div>
+      <div class="footer-buttons">
+       <a href="sialconnt.html"><button>HOME</button></a>
+        <a href="aboutme.html"><button>ABOUT US</button></a>
+        <a href="https://maps.google.com/?q=Sialkot,Punjab,Pakistan" target="_blank"><button>Sialkot</button></a>
+        <button>English</button>
+      </div>
+    </div>
+    <p>All content on this site: Copyright ©, its licensors, and contributors. All rights are reserved, including those for text and data mining, AI training, and similar technologies. For all open access content, the Creative Commons licensing terms apply.</p>
+  </footer>
+
+  <!-- Chatbot Widget -->
+  <button id="chatbotButton" onclick="toggleChatbot()">💬 Chat</button>
+  <div id="chatbotWidget">
+    <iframe src="chatbot.html" width="100%" height="100%" style="border:none;"></iframe>
+  </div>
+
+  <script>
+    let currentUser = null;
+    let dbInstance = null;
+    let allFactories = []; // Cache for all factories
+    let searchTimeout = null;
+
+    window.addEventListener('load', () => {
+      dbInstance = window.db;
+      window.auth.onAuthStateChanged((user) => {
+        currentUser = user;
+        updateUserInterface();
+      });
+      loadRealTimeData();
+      setupSearchFunctionality();
+    });
+
+    // Fixed search functionality
+    function setupSearchFunctionality() {
+      const searchInput = document.getElementById('searchInput');
+      const searchDropdown = document.getElementById('searchDropdown');
+
+      // Load all factories for search
+      loadAllFactories();
+
+      // Search input event listener
+      searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        
+        if (searchTimeout) {
+          clearTimeout(searchTimeout);
+        }
+
+        if (query.length >= 2) {
+          searchDropdown.style.display = 'block';
+          searchDropdown.innerHTML = '<div class="loading">Searching...</div>';
+          
+          searchTimeout = setTimeout(() => {
+            performSearch(query);
+          }, 300);
+        } else if (query.length === 0) {
+          searchDropdown.style.display = 'none';
+        }
+      });
+
+      // Keep dropdown open when focused and has content
+      searchInput.addEventListener('focus', (e) => {
+        const query = e.target.value.trim();
+        if (query.length >= 2) {
+          searchDropdown.style.display = 'block';
+        }
+      });
+
+      // Hide dropdown when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.search-container')) {
+          searchDropdown.style.display = 'none';
+        }
+      });
+
+      // Handle Enter key
+      searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          const query = e.target.value.trim();
+          if (query.length >= 2) {
+            performSearch(query, true);
+          }
+        }
+      });
+    }
+
+    // Load all factories for search
+    async function loadAllFactories() {
+      try {
+        const factoriesRef = window.collection(window.db, 'factories');
+        const snapshot = await window.getDocs(factoriesRef);
+        allFactories = [];
+        snapshot.forEach((doc) => {
+          const factoryData = doc.data();
+          allFactories.push({
+            id: doc.id,
+            name: factoryData.name || '',
+            address: factoryData.address || '',
+            description: factoryData.description || '',
+            category: factoryData.category || '',
+            ...factoryData
+          });
+        });
+      } catch (error) {
+        console.error('Error loading factories for search:', error);
+      }
+    }
+
+    // Fixed perform search function
+    function performSearch(query, forceRedirect = false) {
+      const searchDropdown = document.getElementById('searchDropdown');
+      
+      if (allFactories.length === 0) {
+        searchDropdown.innerHTML = '<div class="no-results">Loading factories...</div>';
+        return;
+      }
+
+      const lowerQuery = query.toLowerCase();
+      const results = allFactories.filter(factory => {
+        return (
+          (factory.name && factory.name.toLowerCase().includes(lowerQuery)) ||
+          (factory.address && factory.address.toLowerCase().includes(lowerQuery)) ||
+          (factory.category && factory.category.toLowerCase().includes(lowerQuery)) ||
+          (factory.description && factory.description.toLowerCase().includes(lowerQuery))
+        );
+      });
+
+      if (results.length === 0) {
+        searchDropdown.innerHTML = '<div class="no-results">No factories found</div>';
+      } else {
+        if (forceRedirect && results.length === 1) {
+          redirectToFactory(results[0]);
+          return;
+        }
+
+        let html = '';
+        results.slice(0, 8).forEach((factory, index) => {
+          html += `
+            <div class="search-result" onclick="selectFactory(${index})">
+              <div class="factory-name">${factory.name || 'Unnamed Factory'}</div>
+              <div class="factory-address">${factory.address || 'Address not available'}</div>
+            </div>
+          `;
+        });
+
+        if (results.length > 8) {
+          html += `<div class="no-results">+${results.length - 8} more results...</div>`;
+        }
+
+        searchDropdown.innerHTML = html;
+        
+        // Store current search results for selection
+        window.currentSearchResults = results;
+      }
+    }
+
+    // Select factory from search results
+    function selectFactory(index) {
+      const factory = window.currentSearchResults[index];
+      redirectToFactory(factory);
+    }
+
+    // Fixed redirect to factory function
+    function redirectToFactory(factory) {
+      const searchDropdown = document.getElementById('searchDropdown');
+      const searchInput = document.getElementById('searchInput');
+      
+      // Hide dropdown and clear search input
+      searchDropdown.style.display = 'none';
+      searchInput.value = '';
+
+      // Store factory data and redirect
+      sessionStorage.setItem('selectedFactory', JSON.stringify(factory));
+      window.location.href = `factory1.html?id=${factory.id}`;
+    }
+
+    // Category navigation function
+    function navigateToCategory(categoryKey) {
+      // Navigate to categories page with URL parameter
+      window.location.href = `categories.html?category=${categoryKey}`;
+    }
+
+    // Animated counter function
+    function animateCounter(elementId, targetValue) {
+      const element = document.getElementById(elementId);
+      const startValue = parseInt(element.textContent) || 0;
+      const duration = 1500; // 1.5 seconds animation
+      const increment = (targetValue - startValue) / (duration / 16); // 60fps
+      let currentValue = startValue;
+
+      const updateCounter = () => {
+        currentValue += increment;
+        if ((increment > 0 && currentValue < targetValue) || 
+            (increment < 0 && currentValue > targetValue)) {
+          element.textContent = Math.floor(currentValue);
+          requestAnimationFrame(updateCounter);
+        } else {
+          element.textContent = targetValue;
+        }
+      };
+      
+      if (startValue !== targetValue) {
+        updateCounter();
+      }
+    }
+
+    // Fixed loadRealTimeData function with proper product counting
+    function loadRealTimeData() {
+      if (!dbInstance) return;
+      
+      try {
+        // Real-time listener for factories
+        const factoriesRef = window.collection(dbInstance, 'factories');
+        window.onSnapshot(factoriesRef, (snapshot) => { 
+          const factoriesCount = snapshot.size;
+          animateCounter('factoriesCount', factoriesCount);
+          // Reload factories for search when data changes
+          loadAllFactories();
+        }, (error) => {
+          console.error('Error loading factories:', error);
+          document.getElementById('factoriesCount').textContent = '40+';
+        });
+
+        // Real-time listener for categories and products
+        const categoriesRef = window.collection(dbInstance, 'categories');
+        window.onSnapshot(categoriesRef, (snapshot) => {
+          let categoriesCount = 0;
+          let totalProducts = 0;
+
+          snapshot.forEach((doc) => {
+            categoriesCount++;
+            const categoryData = doc.data();
+            
+            // Count all subcategories (products) within each category
+            if (categoryData.items && Array.isArray(categoryData.items)) {
+              categoryData.items.forEach(item => {
+                if (item.sub && Array.isArray(item.sub)) {
+                  totalProducts += item.sub.length;
+                }
+              });
+            }
+          });
+
+          // Update counts with animation
+          animateCounter('categoriesCount', categoriesCount);
+          animateCounter('productsCount', totalProducts);
+        }, (error) => {
+          console.error('Error loading categories:', error);
+          // Fallback to default values
+          document.getElementById('categoriesCount').textContent = '6';
+          document.getElementById('productsCount').textContent = '24';
+        });
+
+      } catch (error) {
+        console.error('Error setting up real-time listeners:', error);
+        // Set fallback values
+        document.getElementById('factoriesCount').textContent = '40+';
+        document.getElementById('categoriesCount').textContent = '6';
+        document.getElementById('productsCount').textContent = '24+';
+      }
+    }
+
+    function updateUserInterface() {
+      const topBarRight = document.getElementById('topBarRight');
+      const eventLoginText = document.getElementById('eventLoginText');
+      const eventActionBtn = document.getElementById('eventActionBtn');
+
+      if (currentUser) {
+        const userName = sessionStorage.getItem('userName') || currentUser.displayName || currentUser.email;
+        topBarRight.innerHTML = `<div class="user-info" onclick="goToProfile()" title="Go to Profile"><i class="fas fa-user-circle" style="font-size: 1.5rem;"></i><span>${userName}</span></div>`;
+        if (eventLoginText) eventLoginText.textContent = `Welcome ${userName}! You'll get notifications for every event`;
+        if (eventActionBtn) {
+          eventActionBtn.textContent = 'GET NOTIFIED';
+          eventActionBtn.onclick = () => { alert('🔔 Event notifications enabled!'); };
+        }
+      } else {
+        topBarRight.innerHTML = `<i class="fas fa-user-circle user-icon" onclick="goToLogin()" title="Login"></i>`;
+        if (eventLoginText) eventLoginText.textContent = 'Login to get notifications for every event';
+        if (eventActionBtn) {
+          eventActionBtn.textContent = 'LOGIN';
+          eventActionBtn.onclick = () => { window.location.href = 'login.html'; };
+        }
+      }
+    }
+
+    function goToProfile() { window.location.href = 'profile.html'; }
+    function goToLogin() { window.location.href = 'login.html'; }
+    function handleEventAction() { if (currentUser) { alert('🔔 Event notifications enabled!'); } else { window.location.href = 'login.html'; } }
+
+    // Chatbot toggle
+    function toggleChatbot() {
+      let box = document.getElementById("chatbotWidget");
+      box.style.display = (box.style.display === "none" || box.style.display === "") ? "block" : "none";
+    }
+  </script>
+</body>
+</html>

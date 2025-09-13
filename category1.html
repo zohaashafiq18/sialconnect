@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Category Details</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style> 
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #1a2234;
+      color: white;
+    }
+    .top-bar {
+      background-color: #1A2234;
+      color: white;
+      padding: 5px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+    }
+    .top-bar .left a {
+      margin-right: 20px;
+      color: white;
+      text-decoration: none;
+    }
+    .navbar {
+      display: flex;
+      height: 40px;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 10px;
+      background: linear-gradient(to right, #f2f2f2, #1a2234a2);
+    }
+    .navbar .logo {
+      display: flex;
+      align-items: center;
+      font-weight: bold;
+      font-size: 22px;
+    }
+    .navbar .logo img {
+      height: 45px;
+      margin-right: 10px;
+    }
+    .navbar .nav-links {
+      list-style: none;
+      display: flex;
+      gap: 25px;
+    }
+    .navbar .nav-links a {
+      text-decoration: none;
+      font-weight: bolder;
+      color: #000000;
+    }
+    .category-info {
+      background-color: #bcb7b766;
+      padding: 30px;
+      line-height: 1.8;
+      text-align: center;
+    }
+    .category-info a {
+      color: #58a6ff;
+      text-decoration: none;
+    }
+    .items-section {
+      padding: 20px;
+    }
+    .items-section h3 {
+      color: white;
+      margin-bottom: 20px;
+      font-size: 24px;
+      text-align: center;
+      text-transform: uppercase;
+    }
+    .items-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      justify-content: center;
+    }
+    .item-card {
+      background-color: #fff;
+      color: #000;
+      width: 150px;
+      text-align: center;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transition: transform 0.3s ease;
+      cursor: pointer;
+    }
+    .item-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+    }
+    .item-card img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+    }
+    .item-card p {
+      margin: 10px 5px;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    .subcategory-count {
+      font-size: 12px;
+      color: #666;
+      font-weight: normal;
+    }
+    .back-btn {
+      background: #3498db;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 20px;
+    }
+    .back-btn:hover {
+      background: #2980b9;
+    }
+    .loading {
+      text-align: center;
+      padding: 50px;
+      color: white;
+      font-size: 18px;
+    }
+    .error {
+      text-align: center;
+      padding: 50px;
+      color: #e74c3c;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Info Bar -->
+  <div class="top-bar">
+    <div class="left">
+      <a href="mailto:sialconnect@gmail.com"><i class="fas fa-envelope"></i> sialconnect@gmail.com</a>
+      <a href="https://maps.google.com/?q=Sialkot,Punjab,Pakistan" target="_blank"><i class="fas fa-map-marker-alt"></i> Sialkot, Punjab Pakistan</a>
+    </div>
+    <div class="right">
+      <a href="profile.html"><i class="fas fa-user-circle"></i></a>
+    </div>
+  </div>
+
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="logo"> <img src="logo.jpg" alt="SialConnect Logo"> SIALCONNECT </div>
+    <ul class="nav-links">
+      <li><a href="sialconnt.html">HOME</a></li>
+      <li><a href="factories.html">FACTORY</a></li>
+      <li><a href="categories.html">CATEGORY</a></li>
+      <li><a href="aboutme.html">ABOUT US</a></li>
+    </ul>
+  </nav>
+
+  <!-- Back Button -->
+  <button class="back-btn" onclick="history.back()">← Back to Categories</button>
+
+  <!-- Category Information -->
+  <section class="category-info" id="categoryInfo">
+    <h2>Loading category details...</h2>
+  </section>
+
+  <!-- All Items -->
+  <section class="items-section">
+    <h3>ALL ITEMS</h3>
+    <div class="items-row" id="allItems">
+      <p class="loading">Loading items...</p>
+    </div>
+  </section>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCEA_n66W-Dt6eBoPe7QiaSUebEv8ctBaE",
+      authDomain: "sialconnect-5efb5.firebaseapp.com",
+      projectId: "sialconnect-5efb5",
+      storageBucket: "sialconnect-5efb5.appspot.com",
+      messagingSenderId: "660615885537",
+      appId: "1:660615885537:web:27e04abd3396adfcde3da0"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Get categoryId from URL (similar to factory1.html)
+    const urlParams = new URLSearchParams(window.location.search);
+    const categoryId = urlParams.get("id");
+
+    // Load Category Details (similar to loadFactoryDetails)
+    async function loadCategoryDetails() {
+      if (!categoryId) {
+        document.getElementById("categoryInfo").innerHTML = "<p>No category selected</p>";
+        return;
+      }
+
+      try {
+        const doc = await db.collection("categories").doc(categoryId).get();
+        if (!doc.exists) {
+          document.getElementById("categoryInfo").innerHTML = "<p>Category not found</p>";
+          return;
+        }
+
+        const category = doc.data();
+        document.getElementById("categoryInfo").innerHTML = `
+          <h2>Category Information:</h2>
+          <p><strong>Category Name:</strong> ${category.name || "N/A"}</p>
+          <p><strong>Category ID:</strong> ${categoryId}</p>
+          <p><strong>Total Items:</strong> ${category.items ? category.items.length : 0}</p>
+          <p><strong>Created:</strong> ${category.createdAt ? new Date(category.createdAt.seconds * 1000).toLocaleDateString() : "N/A"}</p>
+        `;
+
+        // Load Items (similar to loadProducts)
+        loadItems(category);
+
+      } catch (error) {
+        document.getElementById("categoryInfo").innerHTML = `<p class="error">Error: ${error.message}</p>`;
+      }
+    }
+
+    // Load Items (similar to loadProducts function)
+    function loadItems(category) {
+      const allItemsContainer = document.getElementById("allItems");
+
+      try {
+        allItemsContainer.innerHTML = "";
+
+        if (!category.items || category.items.length === 0) {
+          allItemsContainer.innerHTML = "<p class='error'>No items found in this category</p>";
+          return;
+        }
+
+        category.items.forEach(item => {
+          const itemCard = document.createElement('div');
+          itemCard.className = 'item-card';
+          
+          const subcategoryCount = item.sub ? item.sub.length : 0;
+          const imageUrl = item.img || `https://via.placeholder.com/150x120?text=${item.name ? item.name.charAt(0) : 'I'}`;
+          
+          itemCard.innerHTML = `
+            <img src="${imageUrl}" alt="${item.name || 'Item'}" onerror="this.src='https://via.placeholder.com/150x120?text=No+Image'">
+            <p>${item.name || "Unnamed Item"}</p>
+            <p class="subcategory-count">${subcategoryCount} subcategories</p>
+          `;
+
+          // Click handler to show subcategories (similar to product navigation)
+          if (subcategoryCount > 0) {
+            itemCard.onclick = () => {
+              showSubcategories(item);
+            };
+          } else {
+            itemCard.style.cursor = 'default';
+            itemCard.style.opacity = '0.7';
+          }
+
+          allItemsContainer.appendChild(itemCard);
+        });
+
+      } catch (error) {
+        allItemsContainer.innerHTML = `<p class="error">Error loading items: ${error.message}</p>`;
+      }
+    }
+
+    // Show subcategories in a modal or new section
+    function showSubcategories(item) {
+      const allItemsContainer = document.getElementById("allItems");
+      const itemsSection = document.querySelector(".items-section h3");
+      
+      // Update section title
+      itemsSection.textContent = `${item.name.toUpperCase()} - SUBCATEGORIES`;
+      
+      // Clear current content
+      allItemsContainer.innerHTML = "";
+      
+      // Add back button
+      const backToItemsBtn = document.createElement('button');
+      backToItemsBtn.className = 'back-btn';
+      backToItemsBtn.textContent = '← Back to All Items';
+      backToItemsBtn.onclick = () => {
+        itemsSection.textContent = 'ALL ITEMS';
+        loadCategoryDetails(); // Reload the category
+      };
+      allItemsContainer.appendChild(backToItemsBtn);
+      
+      if (!item.sub || item.sub.length === 0) {
+        const noSubcategories = document.createElement('p');
+        noSubcategories.className = 'error';
+        noSubcategories.textContent = 'No subcategories found';
+        allItemsContainer.appendChild(noSubcategories);
+        return;
+      }
+      
+      // Create subcategory cards
+      const subcategoryRow = document.createElement('div');
+      subcategoryRow.className = 'items-row';
+      
+      item.sub.forEach(sub => {
+        const subCard = document.createElement('div');
+        subCard.className = 'item-card';
+        
+        const imageUrl = sub.img || `https://via.placeholder.com/150x120?text=${sub.name ? sub.name.charAt(0) : 'S'}`;
+        const productLink = sub.link || 'product1.html';
+        
+        subCard.innerHTML = `
+          <img src="${imageUrl}" alt="${sub.name || 'Subcategory'}" onerror="this.src='https://via.placeholder.com/150x120?text=No+Image'">
+          <p>${sub.name || "Unnamed Subcategory"}</p>
+          <p class="subcategory-count">Click to view products</p>
+        `;
+        
+        // Navigate to product page
+        subCard.onclick = () => {
+          window.location.href = productLink;
+        };
+        
+        subcategoryRow.appendChild(subCard);
+      });
+      
+      allItemsContainer.appendChild(subcategoryRow);
+    }
+
+    // On page load (similar to factory1.html)
+    window.addEventListener("DOMContentLoaded", loadCategoryDetails);
+  </script>
+</body>
+</html>

@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Details</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Firebase v9 compat -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #1A2234;
+            box-sizing: border-box;
+        }
+
+        .top-bar {
+            background-color: #1A2234;
+            color: white;
+            padding: 5px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+        
+        .top-bar .left a {
+            margin-right: 20px;
+            color: white;
+            text-decoration: none;
+        }
+        
+        .top-bar .right i {
+            font-size: 18px;
+            color: whitesmoke;
+        }
+
+        .navbar {
+            position: static;
+            display: flex;
+            height: 40px;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 10px;
+            background: linear-gradient(to right, #f2f2f2, #1a2234a2);
+        }
+        
+        .navbar .logo {
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+            font-size: 22px;
+        }
+        
+        .navbar .logo img {
+            height: 45px;
+            margin-right: 10px;
+        }
+        
+        .navbar .nav-links {
+            margin-right: 345px;
+            list-style: none;
+            display: flex;
+            gap: 25px;
+        }
+        
+        .navbar .nav-links a {
+            text-decoration: none;
+            font-weight: bolder;
+            color: #000000;
+        }
+/*
+        .search-box {
+            padding-right: 10px;
+            color:#e6e6e6;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        
+        .search-box input {
+            display: none;
+            border: 1px solid #ccc;
+            padding: 5px;
+            border-radius: 5px;
+            transition: width 0.3s ease;
+        }
+        
+        .search-box:hover input {
+            display: inline-block;
+            width: 150px;
+        }
+*/
+        /* Main Content */
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            display: flex;   
+            gap: 10px;      
+            justify-content: center;
+        }
+
+        .product-images {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 40px;
+            width: 260px;
+            height: 260px;
+            background: #bbb;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .product-images img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Product Info */
+        .product-info {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .category {
+            font-size: 22px;
+            margin-bottom: 10px;
+            color: #ecf0f1;
+        }
+
+        .product-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: white;
+        }
+        
+        .product-description {
+            font-size: 16px;
+            margin-bottom: 20px;
+            color: #bdc3c7;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .product-by {
+            margin-bottom: 20px;
+        }
+
+        .manufacturer {
+            background: #7f8c8d;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 5px;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        /* Rating Section */
+        .rating-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .rate-product {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: white;
+        }
+
+        .stars {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+
+        .star {
+            font-size: 24px;
+            color: #ddd;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .star.active,
+        .star:hover {
+            color: #f1c40f;
+        }
+
+        .write-review-btn {
+            background: #7f8c8d;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .write-review-btn:hover {
+            background: #95a5a6;
+        }
+
+        /* Reviews Section */
+        .reviews-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .reviews-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .reviews-title {
+            font-size: 20px;
+            font-weight: 500;
+        }
+
+        .rating-display {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .rating-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #f1c40f;
+        }
+
+        .rating-stars {
+            display: flex;
+            gap: 2px;
+        }
+
+        .rating-star {
+            font-size: 16px;
+            color: #f1c40f;
+        }
+
+        .total-reviews {
+            font-size: 12px;
+            color: #bdc3c7;
+            margin-top: 5px;
+        }
+
+        /* Review Items */
+        .review-item {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            color: white;
+        }
+
+        .review-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .reviewer-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #3498db;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .reviewer-info h4 {
+            font-size: 16px;
+            margin-bottom: 3px;
+        }
+
+        .review-stars {
+            display: flex;
+            gap: 2px;
+            margin-bottom: 3px;
+        }
+
+        .review-date {
+            font-size: 12px;
+            color: #bdc3c7;
+        }
+
+        .review-text {
+            color: #ecf0f1;
+            line-height: 1.4;
+        }
+
+        /* Modal for writing reviews */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background: #2c3e50;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 500px;
+            color: white;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .close {
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #bdc3c7;
+        }
+
+        .close:hover {
+            color: white;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #555;
+            border-radius: 5px;
+            background: #34495e;
+            color: white;
+            box-sizing: border-box;
+        }
+
+        .form-group textarea {
+            height: 80px;
+            resize: vertical;
+        }
+
+        .submit-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            width: 100%;
+        }
+
+        .submit-btn:hover {
+            background: #2980b9;
+        }
+        
+        .back-btn {
+            background: none;
+            color: #ccc;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 26px;
+        }
+        
+        .back-btn:hover {
+            background-color: #414447;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #bdc3c7;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 50px;
+            color: #e74c3c;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .product-images {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .product-image {
+                width: 250px;
+                height: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Info Bar -->
+    <div class="top-bar">
+        <div class="left">
+            <a href="mailto:sialconnect@gmail.com"><i class="fas fa-envelope"></i> sialconnect@gmail.com</a>
+            <a href="https://maps.google.com/?q=Sialkot,Punjab,Pakistan" target="_blank"><i class="fas fa-map-marker-alt"></i> Sialkot, Punjab Pakistan</a>
+        </div>
+        <div class="right">
+            <a href="profile.html"><i class="fas fa-user-circle"></i></a>
+        </div>
+    </div>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="logo"><img src="logo.jpg" alt="SialConnect Logo"> SIALCONNECT </div>
+        <ul class="nav-links">
+            <li><a href="sialconnt.html">HOME</a></li>
+            <li><a href="factories.html">FACTORY</a></li>
+            <li><a href="categories.html">CATEGORY</a></li>
+            <li><a href="aboutme.html">ABOUT US</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <button class="back-btn" onclick="history.back()">←</button>
+
+    <div id="productContent">
+        <div class="loading">Loading product details...</div>
+    </div>
+
+    <!-- Review Modal -->
+    <div id="reviewModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Write a Review</h2>
+                <span class="close" onclick="closeReviewModal()">&times;</span>
+            </div>
+            <form id="reviewForm">
+                <div class="form-group">
+                    <label for="reviewerName">Name:</label>
+                    <input type="text" id="reviewerName" name="reviewerName" required>
+                </div>
+                <div class="form-group">
+                    <label for="reviewRating">Rating:</label>
+                    <div class="stars" id="modalRating">
+                        <span class="star" data-rating="1">★</span>
+                        <span class="star" data-rating="2">★</span>
+                        <span class="star" data-rating="3">★</span>
+                        <span class="star" data-rating="4">★</span>
+                        <span class="star" data-rating="5">★</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="reviewText">Review:</label>
+                    <textarea id="reviewText" name="reviewText" placeholder="Share your experience..." required></textarea>
+                </div>
+                <button type="submit" class="submit-btn">Submit Review</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCEA_n66W-Dt6eBoPe7QiaSUebEv8ctBaE",
+            authDomain: "sialconnect-5efb5.firebaseapp.com",
+            projectId: "sialconnect-5efb5",
+            storageBucket: "sialconnect-5efb5.firebasestorage.app",
+            messagingSenderId: "660615885537",
+            appId: "1:660615885537:web:27e04abd3396adfcde3da0"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Get product details from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const category = urlParams.get('category');
+        const productId = urlParams.get('product');
+        const subProductId = urlParams.get('subproduct');
+
+        // Global variables for ratings
+        let userRating = 0;
+        let modalRating = 0;
+        let currentProductPath = '';
+
+        // Load product details
+        async function loadProductDetails() {
+    const productContent = document.getElementById('productContent');
+    
+    if (!category || !productId || !subProductId) {
+        productContent.innerHTML = '<div class="error">Invalid product parameters</div>';
+        return;
+    }
+
+    try {
+        currentProductPath = `${category}_${productId}_${subProductId}`;
+        
+        const categoryDoc = await db.collection('categories').doc(category).get();
+        
+        if (!categoryDoc.exists) {
+            productContent.innerHTML = '<div class="error">Category not found</div>';
+            return;
+        }
+
+        const categoryData = categoryDoc.data();
+        const mainProduct = categoryData.items.find(item => item.name === productId);
+        
+        if (!mainProduct) {
+            productContent.innerHTML = '<div class="error">Product not found</div>';
+            return;
+        }
+
+        const subProduct = mainProduct.sub.find(sub => sub.name === subProductId);
+        
+        if (!subProduct) {
+            productContent.innerHTML = '<div class="error">Sub-product not found</div>';
+            return;
+        }
+
+        // Render product first
+        await renderProduct(categoryData.name, mainProduct, subProduct);
+        
+        // IMPORTANT: Wait longer for DOM to update
+        setTimeout(() => {
+            loadReviews();
+            setupRatingFunctionality();
+        }, 500); // 500ms instead of 100ms
+        
+    } catch (error) {
+        console.error('Error loading product:', error);
+        productContent.innerHTML = `<div class="error">Error loading product: ${error.message}</div>`;
+    }
+}
+
+        // Render product details with factory information
+        async function renderProduct(categoryName, mainProduct, subProduct) {
+            const productContent = document.getElementById('productContent');
+            
+            // Get product details from Firebase data
+            const price = subProduct.price || '$99.99';
+            let manufacturer = subProduct.company || 'FORWARD SPORTS';
+            const description = subProduct.detail || 'High-quality product with excellent craftsmanship and durability.';
+            
+            // Try to get full factory details if company field contains factory ID
+            let factoryLink = '';
+            if (subProduct.factoryId) {
+                try {
+                    const factoryDoc = await db.collection('factories').doc(subProduct.factoryId).get();
+                    if (factoryDoc.exists) {
+                        const factoryData = factoryDoc.data();
+                        manufacturer = factoryData.name || manufacturer;
+                        factoryLink = `<a href="factory1.html?id=${subProduct.factoryId}" style="color: white; text-decoration: underline; margin-left: 10px;">View Factory</a>`;
+                    }
+                } catch (error) {
+                    console.error('Error loading factory details:', error);
+                }
+            }
+            
+            // Handle multiple images if available
+            const images = subProduct.images || (subProduct.img ? [subProduct.img] : ['https://via.placeholder.com/260']);
+            
+            productContent.innerHTML = `
+                <div class="container">
+                    ${images.map(img => `
+                        <div class="product-images">
+                            <img src="${img}" onerror="this.src='https://via.placeholder.com/260'" alt="${subProduct.name}">
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="product-info">
+                    <div class="category">Category: ${categoryName}</div>
+                    <div class="product-title">${subProduct.name}</div>
+                    <div class="product-description">${description}</div>
+                   
+                    <div class="product-by">Product by:</div>
+                    <div class="manufacturer">${manufacturer}${factoryLink}</div>
+                </div>
+
+                <div class="rating-section">
+                    <div class="rate-product">Rate this product:</div>
+                    <div class="stars" id="userRating">
+                        <span class="star" data-rating="1">★</span>
+                        <span class="star" data-rating="2">★</span>
+                        <span class="star" data-rating="3">★</span>
+                        <span class="star" data-rating="4">★</span>
+                        <span class="star" data-rating="5">★</span>
+                    </div>
+                    <button class="write-review-btn" onclick="openReviewModal()">Write a review</button>
+                </div>
+
+                <div class="reviews-section">
+                    <div class="reviews-header">
+                        <h3 class="reviews-title">Ratings and reviews</h3>
+                        <div>
+                            <div class="rating-display">
+                                <span class="rating-number" id="overallRating">0.0</span>
+                                <div class="rating-stars" id="overallStars">
+                                    <span class="rating-star">★</span>
+                                    <span class="rating-star">★</span>
+                                    <span class="rating-star">★</span>
+                                    <span class="rating-star">★</span>
+                                    <span class="rating-star">★</span>
+                                </div>
+                            </div>
+                            <div class="total-reviews" id="totalReviews">0 reviews</div>
+                        </div>
+                    </div>
+                    <div id="reviewsList">
+                        <div class="loading">Loading reviews...</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Load reviews from Firebase - Fixed version
+        async function loadReviews() {
+    // Wait for element to exist
+    let attempts = 0;
+    const waitForElement = setInterval(() => {
+        const reviewsList = document.getElementById('reviewsList');
+        attempts++;
+        
+        if (reviewsList) {
+            clearInterval(waitForElement);
+            // Element found, now load reviews
+            actuallyLoadReviews(reviewsList);
+        } else if (attempts > 20) { // 2 seconds max wait
+            clearInterval(waitForElement);
+            console.error('Reviews list element never appeared');
+        }
+    }, 100);
+}
+
+async function actuallyLoadReviews(reviewsList) {
+    try {
+        console.log('Loading reviews for:', currentProductPath);
+        
+        const reviewsSnapshot = await db.collection('reviews')
+            .where('productPath', '==', currentProductPath)
+            .get();
+        
+        reviewsList.innerHTML = '';
+        
+        if (reviewsSnapshot.empty) {
+            reviewsList.innerHTML = '<div style="text-align: center; color: #bdc3c7;">No reviews yet</div>';
+            updateOverallRating([]);
+            return;
+        }
+        
+        const reviews = [];
+        reviewsSnapshot.forEach(doc => {
+            const review = doc.data();
+            reviews.push(review);
+            renderReview(review);
+        });
+        
+        updateOverallRating(reviews);
+        
+    } catch (error) {
+        console.error('Error:', error);
+        reviewsList.innerHTML = '<div style="color: #e74c3c;">Error loading reviews</div>';
+    }
+}
+
+        // Render a single review
+        function renderReview(review) {
+            const reviewsList = document.getElementById('reviewsList');
+            if (!reviewsList) return;
+            
+            const name = review.name || 'Anonymous';
+            const initials = name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
+            const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6'];
+            const avatarColor = colors[Math.abs(name.charCodeAt(0)) % colors.length];
+            
+            let reviewDate = 'Recently';
+            if (review.date || review.timestamp) {
+                try {
+                    const dateObj = review.date || review.timestamp;
+                    if (dateObj && dateObj.toDate) {
+                        reviewDate = dateObj.toDate().toLocaleDateString('en-GB');
+                    } else if (dateObj) {
+                        reviewDate = new Date(dateObj).toLocaleDateString('en-GB');
+                    }
+                } catch (e) {
+                    console.error('Error formatting date:', e);
+                }
+            }
+            
+            const reviewHTML = `
+                <div class="review-item">
+                    <div class="review-header">
+                        <div class="reviewer-avatar" style="background: ${avatarColor};">${initials}</div>
+                        <div class="reviewer-info">
+                            <h4>${name}</h4>
+                            <div class="review-stars">
+                                ${'★'.repeat(review.rating || 5)}${'☆'.repeat(5 - (review.rating || 5))}
+                            </div>
+                            <div class="review-date">${reviewDate}</div>
+                        </div>
+                    </div>
+                    <div class="review-text">${review.text || 'No comment provided'}</div>
+                </div>
+            `;
+            
+            reviewsList.insertAdjacentHTML('beforeend', reviewHTML);
+        }
+
+        // Update overall rating
+        function updateOverallRating(reviews) {
+            const overallRatingElement = document.getElementById('overallRating');
+            const overallStarsElement = document.getElementById('overallStars');
+            
+            if (!overallRatingElement || !overallStarsElement) return;
+            
+            if (reviews.length === 0) {
+                overallRatingElement.textContent = '0.0';
+                const stars = overallStarsElement.querySelectorAll('.rating-star');
+                stars.forEach(star => star.style.color = '#555');
+                return;
+            }
+            
+            const totalRating = reviews.reduce((sum, review) => sum + (review.rating || 0), 0);
+            const averageRating = (totalRating / reviews.length).toFixed(1);
+            
+            overallRatingElement.textContent = averageRating;
+            
+            // Update overall stars display
+            const stars = overallStarsElement.querySelectorAll('.rating-star');
+            const fullStars = Math.floor(averageRating);
+            const hasHalfStar = averageRating - fullStars >= 0.5;
+            
+            stars.forEach((star, index) => {
+                if (index < fullStars) {
+                    star.style.color = '#f1c40f';
+                } else if (index === fullStars && hasHalfStar) {
+                    star.style.color = '#f1c40f';
+                    star.style.opacity = '0.5';
+                } else {
+                    star.style.color = '#555';
+                    star.style.opacity = '1';
+                }
+            });
+        }
+
+        // Setup rating functionality
+        function setupRatingFunctionality() {
+            // User rating stars
+            document.querySelectorAll('#userRating .star').forEach(star => {
+                star.addEventListener('click', function() {
+                    userRating = parseInt(this.dataset.rating);
+                    updateStars('#userRating', userRating);
+                });
+                
+                star.addEventListener('mouseover', function() {
+                    const rating = parseInt(this.dataset.rating);
+                    updateStars('#userRating', rating);
+                });
+            });
+
+            const userRatingElement = document.getElementById('userRating');
+            if (userRatingElement) {
+                userRatingElement.addEventListener('mouseleave', function() {
+                    updateStars('#userRating', userRating);
+                });
+            }
+
+            // Modal rating stars
+            document.querySelectorAll('#modalRating .star').forEach(star => {
+                star.addEventListener('click', function() {
+                    modalRating = parseInt(this.dataset.rating);
+                    updateStars('#modalRating', modalRating);
+                });
+                
+                star.addEventListener('mouseover', function() {
+                    const rating = parseInt(this.dataset.rating);
+                    updateStars('#modalRating', rating);
+                });
+            });
+
+            const modalRatingElement = document.getElementById('modalRating');
+            if (modalRatingElement) {
+                modalRatingElement.addEventListener('mouseleave', function() {
+                    updateStars('#modalRating', modalRating);
+                });
+            }
+        }
+
+        function updateStars(selector, rating) {
+            document.querySelectorAll(selector + ' .star').forEach((star, index) => {
+                if (index < rating) {
+                    star.classList.add('active');
+                } else {
+                    star.classList.remove('active');
+                }
+            });
+        }
+
+        // Modal functions
+        window.openReviewModal = function() {
+            document.getElementById('reviewModal').style.display = 'block';
+        }
+
+        window.closeReviewModal = function() {
+            document.getElementById('reviewModal').style.display = 'none';
+            document.getElementById('reviewForm').reset();
+            modalRating = 0;
+            updateStars('#modalRating', 0);
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('reviewModal');
+            if (event.target === modal) {
+                closeReviewModal();
+            }
+        }
+
+        // Review form submission - Fixed version
+        document.getElementById('reviewForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('reviewerName').value.trim();
+            const reviewText = document.getElementById('reviewText').value.trim();
+            
+            if (modalRating === 0) {
+                alert('Please select a rating!');
+                return;
+            }
+            
+            if (!name) {
+                alert('Please enter your name!');
+                return;
+            }
+            
+            try {
+                console.log('Adding review for product:', currentProductPath);
+                
+                // Add review to Firebase with proper timestamp
+                await db.collection('reviews').add({
+                    productPath: currentProductPath,
+                    name: name,
+                    rating: modalRating,
+                    text: reviewText,
+                    date: firebase.firestore.FieldValue.serverTimestamp(),
+                    // Add backup timestamp in case serverTimestamp fails
+                    createdAt: new Date().toISOString()
+                });
+                
+                alert('Review submitted successfully!');
+                closeReviewModal();
+                
+                // Reload reviews after a short delay to ensure Firebase has processed the new review
+                setTimeout(() => {
+                    loadReviews();
+                }, 500);
+                
+            } catch (error) {
+                console.error('Error adding review:', error);
+                alert('Error adding review. Please try again.');
+            }
+        });
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadProductDetails();
+        });
+
+        // Add real-time listener for reviews (optional but useful)
+        function setupRealtimeReviews() {
+            if (!currentProductPath) return;
+            
+            db.collection('reviews')
+                .where('productPath', '==', currentProductPath)
+                .onSnapshot((snapshot) => {
+                    console.log('Reviews updated in real-time');
+                    loadReviews();
+                }, (error) => {
+                    console.error('Error in real-time listener:', error);
+                });
+        }
+    </script>
+</body>
+</html>
